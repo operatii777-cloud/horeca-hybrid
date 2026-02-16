@@ -8,11 +8,14 @@ export default function TablePlanPage() {
 
   useEffect(() => {
     const load = () => {
-      fetch("/api/orders?status=open").then((r) => r.json()).then((openOrders) => {
-        fetch("/api/orders?status=delivered").then((r) => r.json()).then((deliveredOrders) => {
+      Promise.all([
+        fetch("/api/orders?status=open").then((r) => r.json()),
+        fetch("/api/orders?status=delivered").then((r) => r.json()),
+      ])
+        .then(([openOrders, deliveredOrders]) => {
           setOrders([...openOrders, ...deliveredOrders]);
-        });
-      }).catch(() => {});
+        })
+        .catch(() => {});
       fetch("/api/reservations").then((r) => r.json()).then(setReservations).catch(() => {});
     };
     load();

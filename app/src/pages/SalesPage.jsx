@@ -30,15 +30,14 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
   }, []);
 
   const loadOrders = () => {
-    fetch("/api/orders?status=open")
-      .then((r) => r.json())
-      .then((openOrders) => {
-        fetch("/api/orders?status=delivered")
-          .then((r) => r.json())
-          .then((deliveredOrders) => {
-            setOrders([...openOrders, ...deliveredOrders]);
-          });
-      });
+    Promise.all([
+      fetch("/api/orders?status=open").then((r) => r.json()),
+      fetch("/api/orders?status=delivered").then((r) => r.json()),
+    ])
+      .then(([openOrders, deliveredOrders]) => {
+        setOrders([...openOrders, ...deliveredOrders]);
+      })
+      .catch(() => {});
   };
 
   const filteredProducts = selectedCategory
