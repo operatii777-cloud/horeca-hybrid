@@ -93,13 +93,14 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
 
   const closeOrder = async (orderId, payMethod) => {
     const order = orders.find((o) => o.id === orderId);
-    await fetch(`/api/orders/${orderId}/close`, {
+    const res = await fetch(`/api/orders/${orderId}/close`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ payMethod }),
     });
+    const closed = await res.json();
     setPayConfirm(null);
-    setPaySuccess({ orderId, payMethod, total: order?.total, tableNr: order?.tableNr });
+    setPaySuccess({ orderId, payMethod, total: closed.total || order?.total || 0, tableNr: closed.tableNr || order?.tableNr });
     setTimeout(() => setPaySuccess(null), 4000);
     loadOrders();
   };
