@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
 
-export default function SalesPage({ user, onLogout }) {
+export default function SalesPage({ user, onLogout, initialView = "pos", embedded = false }) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [tableNr, setTableNr] = useState(1);
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [view, setView] = useState("pos"); // "pos" or "orders"
+  const [view, setView] = useState(initialView);
+
+  useEffect(() => {
+    setView(initialView);
+  }, [initialView]);
 
   useEffect(() => {
     fetch("/api/products").then((r) => r.json()).then(setProducts);
@@ -75,8 +79,9 @@ export default function SalesPage({ user, onLogout }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Header */}
+    <div className={embedded ? "text-white" : "min-h-screen bg-gray-900 text-white"}>
+      {/* Header - only show when not embedded */}
+      {!embedded && (
       <header className="bg-gray-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold text-blue-400">Vânzare</h1>
@@ -108,6 +113,7 @@ export default function SalesPage({ user, onLogout }) {
           </button>
         </div>
       </header>
+      )}
 
       {view === "pos" ? (
         <div className="flex h-[calc(100vh-60px)]">

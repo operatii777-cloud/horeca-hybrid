@@ -20,11 +20,16 @@ const tabs = [
   { id: "users", label: "Utilizatori" },
 ];
 
-export default function ManagementPage({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState("products");
+export default function ManagementPage({ user, onLogout, initialTab = "products", embedded = false }) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className={embedded ? "text-white" : "min-h-screen bg-gray-900 text-white"}>
+      {!embedded && (
       <header className="bg-gray-800 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold text-amber-400">Gestiune</h1>
@@ -38,8 +43,9 @@ export default function ManagementPage({ user, onLogout }) {
           Ieșire
         </button>
       </header>
+      )}
 
-      {/* Tabs */}
+      {!embedded && (
       <div className="bg-gray-800 border-t border-gray-700 px-4 flex gap-1 overflow-x-auto">
         {tabs.map((tab) => (
           <button
@@ -55,6 +61,7 @@ export default function ManagementPage({ user, onLogout }) {
           </button>
         ))}
       </div>
+      )}
 
       <div className="p-4">
         {activeTab === "products" && <ProductsTab />}
