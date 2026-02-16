@@ -6,7 +6,8 @@ export default function OrderHistoryPage() {
   useEffect(() => {
     fetch("/api/orders")
       .then((r) => r.json())
-      .then((data) => setOrders(data.filter((o) => o.status === "closed")));
+      .then((data) => setOrders(data.filter((o) => o.status === "closed")))
+      .catch(() => {});
   }, []);
 
   const totalSales = useMemo(

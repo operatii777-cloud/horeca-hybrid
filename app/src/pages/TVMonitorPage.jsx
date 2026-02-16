@@ -8,7 +8,8 @@ export default function TVMonitorPage() {
     const loadOrders = () => {
       fetch("/api/orders?status=open")
         .then((r) => r.json())
-        .then(setOrders);
+        .then(setOrders)
+        .catch(() => {});
     };
     loadOrders();
     const interval = setInterval(loadOrders, 5000);
