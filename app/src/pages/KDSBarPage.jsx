@@ -69,7 +69,7 @@ export default function KDSBarPage() {
             : o
         )
       );
-    });
+    }).catch(() => {});
   };
 
   return (

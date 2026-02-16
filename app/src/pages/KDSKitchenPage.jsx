@@ -68,7 +68,7 @@ export default function KDSKitchenPage() {
             : o
         )
       );
-    });
+    }).catch(() => {});
   };
 
   return (
