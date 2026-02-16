@@ -3,3 +3,4 @@ app/dist
 app/.env
 app/prisma/dev.db
 app/prisma/dev.db-journal
+.vite
