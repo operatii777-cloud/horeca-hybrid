@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  pin       String   @unique
+  role      String   // "admin" or "waiter"
+  createdAt DateTime @default(now())
+  orders    Order[]
+}
+
+model Department {
+  id             Int            @id @default(autoincrement())
+  name           String
+  products       Product[]
+  stockItems     Stock[]
+  transfersFrom  Transfer[]     @relation("TransferFrom")
+  transfersTo    Transfer[]     @relation("TransferTo")
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String
+  products Product[]
+}
+
+model Supplier {
+  id    Int     @id @default(autoincrement())
+  name  String
+  nirs  NIR[]
+  returs Retur[]
+}
+
+model Product {
+  id           Int           @id @default(autoincrement())
+  name         String
+  price        Float
+  unit         String        @default("buc")
+  departmentId Int
+  categoryId   Int
+  department   Department    @relation(fields: [departmentId], references: [id])
+  category     Category      @relation(fields: [categoryId], references: [id])
+  orderItems   OrderItem[]
+  stockItems   Stock[]
+  recipeAsProduct  Recipe[]  @relation("RecipeProduct")
+  recipeItems      RecipeItem[]
+  nirItems     NIRItem[]
+  transferItems TransferItem[]
+  returItems   ReturItem[]
+  inventoryItems InventoryItem[]
+}
+
+model Stock {
+  id           Int        @id @default(autoincrement())
+  productId    Int
+  departmentId Int
+  quantity     Float      @default(0)
+  product      Product    @relation(fields: [productId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  @@unique([productId, departmentId])
+}
+
+model Recipe {
+  id        Int          @id @default(autoincrement())
+  productId Int
+  product   Product      @relation("RecipeProduct", fields: [productId], references: [id])
+  items     RecipeItem[]
+}
+
+model RecipeItem {
+  id         Int     @id @default(autoincrement())
+  recipeId   Int
+  productId  Int
+  quantity   Float
+  recipe     Recipe  @relation(fields: [recipeId], references: [id])
+  product    Product @relation(fields: [productId], references: [id])
+}
+
+model NIR {
+  id         Int       @id @default(autoincrement())
+  supplierId Int
+  date       DateTime  @default(now())
+  number     String
+  supplier   Supplier  @relation(fields: [supplierId], references: [id])
+  items      NIRItem[]
+}
+
+model NIRItem {
+  id        Int   @id @default(autoincrement())
+  nirId     Int
+  productId Int
+  quantity  Float
+  price     Float
+  nir       NIR     @relation(fields: [nirId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Transfer {
+  id               Int            @id @default(autoincrement())
+  fromDepartmentId Int
+  toDepartmentId   Int
+  date             DateTime       @default(now())
+  fromDepartment   Department     @relation("TransferFrom", fields: [fromDepartmentId], references: [id])
+  toDepartment     Department     @relation("TransferTo", fields: [toDepartmentId], references: [id])
+  items            TransferItem[]
+}
+
+model TransferItem {
+  id         Int      @id @default(autoincrement())
+  transferId Int
+  productId  Int
+  quantity   Float
+  transfer   Transfer @relation(fields: [transferId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+}
+
+model Retur {
+  id         Int         @id @default(autoincrement())
+  supplierId Int
+  date       DateTime    @default(now())
+  supplier   Supplier    @relation(fields: [supplierId], references: [id])
+  items      ReturItem[]
+}
+
+model ReturItem {
+  id         Int     @id @default(autoincrement())
+  returId    Int
+  productId  Int
+  quantity   Float
+  retur      Retur   @relation(fields: [returId], references: [id])
+  product    Product @relation(fields: [productId], references: [id])
+}
+
+model Inventory {
+  id   Int             @id @default(autoincrement())
+  date DateTime        @default(now())
+  name String
+  items InventoryItem[]
+}
+
+model InventoryItem {
+  id           Int       @id @default(autoincrement())
+  inventoryId  Int
+  productId    Int
+  systemQty    Float
+  actualQty    Float
+  difference   Float
+  inventory    Inventory @relation(fields: [inventoryId], references: [id])
+  product      Product   @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id        Int         @id @default(autoincrement())
+  tableNr   Int
+  userId    Int
+  status    String      @default("open") // "open", "closed", "cancelled"
+  total     Float       @default(0)
+  payMethod String?     // "CASH", "CARD"
+  createdAt DateTime    @default(now())
+  closedAt  DateTime?
+  user      User        @relation(fields: [userId], references: [id])
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int     @default(1)
+  price     Float
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
