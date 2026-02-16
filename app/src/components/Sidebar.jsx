@@ -10,6 +10,7 @@ const ADMIN_NAV = [
     children: [
       { id: "dashboard", label: "Dashboard", icon: "📊" },
       { id: "pos", label: "POS Vânzare", icon: "🛒" },
+      { id: "comanda-supervisor", label: "Preluare Comandă", icon: "📋" },
       { id: "table-plan", label: "Plan Mese", icon: "🗺️" },
       { id: "kds-kitchen", label: "KDS Bucătărie", icon: "👨‍🍳" },
       { id: "kds-bar", label: "KDS Bar", icon: "🍺" },
@@ -99,6 +100,7 @@ const WAITER_NAV = [
     icon: "⚡",
     children: [
       { id: "pos", label: "POS Vânzare", icon: "🛒" },
+      { id: "comanda-supervisor", label: "Preluare Comandă", icon: "📋" },
       { id: "table-plan", label: "Plan Mese", icon: "🗺️" },
       { id: "orders", label: "Comenzi Deschise", icon: "📝" },
       { id: "order-history", label: "Istoric Comenzi", icon: "📜" },

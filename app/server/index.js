@@ -414,24 +414,30 @@ app.put("/api/inventories/:id/items", async (req, res) => {
 });
 
 // --- Orders ---
+const orderInclude = {
+  user: true,
+  items: { include: { product: { include: { department: true } } } },
+};
+
 app.get("/api/orders", async (req, res) => {
   const where = {};
   if (req.query.status) where.status = req.query.status;
   if (req.query.userId) where.userId = Number(req.query.userId);
   const orders = await prisma.order.findMany({
     where,
-    include: { user: true, items: { include: { product: true } } },
+    include: orderInclude,
     orderBy: { createdAt: "desc" },
   });
   res.json(orders);
 });
 
 app.post("/api/orders", async (req, res) => {
-  const { tableNr, userId, items } = req.body;
+  const { tableNr, userId, items, source } = req.body;
   const order = await prisma.order.create({
     data: {
       tableNr,
       userId,
+      source: source || "pos",
       items: {
         create: items.map((item) => ({
           productId: item.productId,
@@ -441,7 +447,16 @@ app.post("/api/orders", async (req, res) => {
       },
       total: items.reduce((sum, i) => sum + i.price * i.quantity, 0),
     },
-    include: { user: true, items: { include: { product: true } } },
+    include: orderInclude,
+  });
+  res.json(order);
+});
+
+app.put("/api/orders/:id/deliver", async (req, res) => {
+  const order = await prisma.order.update({
+    where: { id: Number(req.params.id) },
+    data: { status: "delivered" },
+    include: orderInclude,
   });
   res.json(order);
 });
@@ -451,7 +466,7 @@ app.put("/api/orders/:id/close", async (req, res) => {
   const order = await prisma.order.update({
     where: { id: Number(req.params.id) },
     data: { status: "closed", payMethod, closedAt: new Date() },
-    include: { user: true, items: { include: { product: true } } },
+    include: orderInclude,
   });
 
   // Decrease stock when order is closed
@@ -518,7 +533,7 @@ app.put("/api/orders/:orderId/items/:itemId/ready", async (req, res) => {
   const item = await prisma.orderItem.update({
     where: { id: Number(req.params.itemId) },
     data: { ready: true },
-    include: { product: true },
+    include: { product: { include: { department: true } } },
   });
   res.json(item);
 });

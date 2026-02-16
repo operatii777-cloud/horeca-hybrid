@@ -164,9 +164,10 @@ model Order {
   id        Int         @id @default(autoincrement())
   tableNr   Int
   userId    Int
-  status    String      @default("open") // "open", "closed", "cancelled"
+  status    String      @default("open") // "open", "delivered", "closed", "cancelled"
   total     Float       @default(0)
-  payMethod String?     // "CASH", "CARD"
+  payMethod String?     // "CASH", "CARD", "VOUCHER", "DISCOUNT", "PROTOCOL"
+  source    String      @default("pos") // "pos", "qr", "supervisor"
   createdAt DateTime    @default(now())
   closedAt  DateTime?
   user      User        @relation(fields: [userId], references: [id])

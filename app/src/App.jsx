@@ -27,6 +27,8 @@ import KioskSelfServicePage from "./pages/KioskSelfServicePage.jsx";
 import FeedbackTerminalPage from "./pages/FeedbackTerminalPage.jsx";
 import MenuTVPage from "./pages/MenuTVPage.jsx";
 import CustomerDisplayPage from "./pages/CustomerDisplayPage.jsx";
+import ComandaQRPage from "./pages/ComandaQRPage.jsx";
+import ComandaSupervisorPage from "./pages/ComandaSupervisorPage.jsx";
 
 const MANAGEMENT_VIEWS = [
   "products", "recipes", "suppliers", "nir", "transfers",
@@ -36,6 +38,12 @@ const MANAGEMENT_VIEWS = [
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeView, setActiveView] = useState(null);
+
+  // Standalone QR ordering page - no login required
+  const path = window.location.pathname;
+  if (path === "/comanda" || path === "/comanda.html") {
+    return <ComandaQRPage />;
+  }
 
   const handleLogout = () => {
     setUser(null);
@@ -97,6 +105,8 @@ export default function App() {
         return <MenuTVPage />;
       case "customer-display":
         return <CustomerDisplayPage />;
+      case "comanda-supervisor":
+        return <ComandaSupervisorPage user={user} />;
       case "manual":
         return <ManualPage />;
       case "order-history":
