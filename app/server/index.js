@@ -817,9 +817,9 @@ app.delete("/api/orders/:id", async (req, res) => {
 app.put("/api/orders/:orderId/items/:itemId/ready", async (req, res) => {
   try {
     const orderId = safeId(req.params.orderId);
-    if (!orderId) return res.status(400).json({ error: "Invalid ID" });
+    if (!orderId) return res.status(400).json({ error: "Invalid order ID" });
     const itemId = safeId(req.params.itemId);
-    if (!itemId) return res.status(400).json({ error: "Invalid ID" });
+    if (!itemId) return res.status(400).json({ error: "Invalid item ID" });
     const item = await prisma.orderItem.update({
       where: { id: itemId },
       data: { ready: true },
@@ -1107,6 +1107,7 @@ if (process.env.NODE_ENV === "production") {
 // --- Global error handler ---
 app.use((err, _req, res, _next) => {
   console.error("Unhandled error:", err);
+  if (res.headersSent) return _next(err);
   res.status(500).json({ error: "Internal server error" });
 });
 
