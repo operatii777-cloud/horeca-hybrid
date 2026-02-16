@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  pin       String   @unique
+  role      String   // "admin" or "waiter"
+  createdAt DateTime @default(now())
+  orders    Order[]
+}
+
+model Department {
+  id       Int       @id @default(autoincrement())
+  name     String
+  products Product[]
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String
+  products Product[]
+}
+
+model Product {
+  id           Int         @id @default(autoincrement())
+  name         String
+  price        Float
+  unit         String      @default("buc")
+  departmentId Int
+  categoryId   Int
+  department   Department  @relation(fields: [departmentId], references: [id])
+  category     Category    @relation(fields: [categoryId], references: [id])
+  orderItems   OrderItem[]
+}
+
+model Order {
+  id        Int         @id @default(autoincrement())
+  tableNr   Int
+  userId    Int
+  status    String      @default("open") // "open", "closed", "cancelled"
+  total     Float       @default(0)
+  payMethod String?     // "CASH", "CARD"
+  createdAt DateTime    @default(now())
+  closedAt  DateTime?
+  user      User        @relation(fields: [userId], references: [id])
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int     @default(1)
+  price     Float
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
