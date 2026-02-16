@@ -36,9 +36,22 @@ export default function KioskSelfServicePage() {
 
   const handleOrder = () => {
     if (cart.length === 0) return;
-    setOrdered(true);
-    setCart([]);
-    setTimeout(() => setOrdered(false), 4000);
+    fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tableNr: 0,
+        userId: 1,
+        items: cart.map((i) => ({ productId: i.id, quantity: i.qty, price: i.price })),
+      }),
+    })
+      .then((r) => r.json())
+      .then(() => {
+        setOrdered(true);
+        setCart([]);
+        setTimeout(() => setOrdered(false), 4000);
+      })
+      .catch(() => {});
   };
 
   return (

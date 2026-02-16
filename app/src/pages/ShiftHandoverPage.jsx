@@ -10,6 +10,10 @@ export default function ShiftHandoverPage() {
   const [clock, setClock] = useState(new Date());
 
   useEffect(() => {
+    fetch("/api/shift-handovers").then((r) => r.json()).then(setHandovers).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const timer = setInterval(() => setClock(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -17,17 +21,17 @@ export default function ShiftHandoverPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.notes && !form.cashInDrawer) return;
-    setHandovers((prev) => [
-      {
-        id: Date.now(),
-        notes: form.notes,
-        cashInDrawer: form.cashInDrawer,
-        issues: form.issues,
-        timestamp: new Date().toLocaleString("ro-RO"),
-      },
-      ...prev,
-    ]);
-    setForm({ notes: "", cashInDrawer: "", issues: "" });
+    fetch("/api/shift-handovers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    })
+      .then((r) => r.json())
+      .then((h) => {
+        setHandovers((prev) => [h, ...prev]);
+        setForm({ notes: "", cashInDrawer: "", issues: "" });
+      })
+      .catch(() => {});
   };
 
   return (
@@ -91,7 +95,7 @@ export default function ShiftHandoverPage() {
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {handovers.map((h) => (
                 <div key={h.id} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-                  <div className="text-sm text-gray-400 mb-2">{h.timestamp}</div>
+                  <div className="text-sm text-gray-400 mb-2">{new Date(h.createdAt).toLocaleString("ro-RO")}</div>
                   {h.notes && <p className="mb-1"><span className="text-gray-400">Note:</span> {h.notes}</p>}
                   {h.cashInDrawer && (
                     <p className="mb-1">

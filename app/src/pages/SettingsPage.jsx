@@ -1,23 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const DEFAULTS = {
+  restaurantName: "Restaurant HoReCa",
+  address: "",
+  cui: "",
+  tablesCount: "10",
+  printerKitchen: "192.168.1.100",
+  printerBar: "192.168.1.101",
+  printerReceipt: "192.168.1.102",
+  displayMode: "dark",
+  language: "ro",
+  autoRefresh: "5",
+};
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({
-    restaurantName: "Restaurant HoReCa",
-    address: "",
-    cui: "",
-    tablesCount: 10,
-    printerKitchen: "192.168.1.100",
-    printerBar: "192.168.1.101",
-    printerReceipt: "192.168.1.102",
-    displayMode: "dark",
-    language: "ro",
-    autoRefresh: 5,
-  });
+  const [settings, setSettings] = useState(DEFAULTS);
   const [saved, setSaved] = useState(false);
 
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((data) => {
+        setSettings((prev) => ({ ...prev, ...data }));
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    })
+      .then((r) => r.json())
+      .then(() => {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      })
+      .catch(() => {});
   };
 
   const update = (key, value) => {

@@ -18,13 +18,41 @@ const CHECKLIST_ITEMS = [
 
 export default function HACCPPage() {
   const [checks, setChecks] = useState({});
-  const [date] = useState(new Date().toLocaleDateString("ro-RO"));
+  const today = new Date().toISOString().slice(0, 10);
+  const [date] = useState(today);
+
+  useEffect(() => {
+    fetch(`/api/haccp?date=${today}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const map = {};
+        for (const c of data) {
+          map[c.itemId] = c.checkedAt;
+        }
+        setChecks(map);
+      })
+      .catch(() => {});
+  }, [today]);
 
   const toggleCheck = (id) => {
-    setChecks((prev) => ({
-      ...prev,
-      [id]: prev[id] ? null : new Date().toLocaleTimeString("ro-RO"),
-    }));
+    const checkedAt = new Date().toLocaleTimeString("ro-RO");
+    fetch("/api/haccp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: today, itemId: id, checkedAt }),
+    })
+      .then((r) => r.json())
+      .then((result) => {
+        setChecks((prev) => {
+          if (result.removed) {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          }
+          return { ...prev, [id]: result.checkedAt };
+        });
+      })
+      .catch(() => {});
   };
 
   const categories = [...new Set(CHECKLIST_ITEMS.map((i) => i.category))];
@@ -34,7 +62,7 @@ export default function HACCPPage() {
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">🧪 HACCP — Checklist Zilnic</h1>
-        <div className="text-gray-400">Data: {date}</div>
+        <div className="text-gray-400">Data: {new Date(date).toLocaleDateString("ro-RO")}</div>
       </div>
 
       <div className="bg-gray-800 rounded-xl shadow-lg p-4 border border-gray-700 mb-6">

@@ -16,21 +16,22 @@ export default function FeedbackTerminalPage() {
 
   const handleSubmit = () => {
     if (rating === null) return;
-    setFeedbacks((prev) => [
-      {
-        id: Date.now(),
-        rating,
-        comment,
-        timestamp: new Date().toLocaleString("ro-RO"),
-      },
-      ...prev,
-    ]);
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setRating(null);
-      setComment("");
-    }, 3000);
+    fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating, comment }),
+    })
+      .then((r) => r.json())
+      .then((fb) => {
+        setFeedbacks((prev) => [fb, ...prev]);
+        setSubmitted(true);
+        setTimeout(() => {
+          setSubmitted(false);
+          setRating(null);
+          setComment("");
+        }, 3000);
+      })
+      .catch(() => {});
   };
 
   if (submitted) {

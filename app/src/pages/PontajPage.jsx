@@ -7,6 +7,18 @@ export default function PontajPage() {
 
   useEffect(() => {
     fetch("/api/users").then((r) => r.json()).then(setUsers).catch(() => {});
+    fetch("/api/attendance")
+      .then((r) => r.json())
+      .then((records) => {
+        const map = {};
+        for (const rec of records) {
+          if (!rec.clockOut && !map[rec.userId]) {
+            map[rec.userId] = rec;
+          }
+        }
+        setAttendance(map);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -15,13 +27,29 @@ export default function PontajPage() {
   }, []);
 
   const toggleClock = (userId) => {
-    setAttendance((prev) => {
-      const entry = prev[userId];
-      if (!entry || entry.out) {
-        return { ...prev, [userId]: { in: new Date(), out: null } };
-      }
-      return { ...prev, [userId]: { ...entry, out: new Date() } };
-    });
+    const entry = attendance[userId];
+    if (entry && !entry.clockOut) {
+      fetch(`/api/attendance/${entry.id}/clock-out`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+      })
+        .then((r) => r.json())
+        .then((rec) => {
+          setAttendance((prev) => ({ ...prev, [userId]: rec }));
+        })
+        .catch(() => {});
+    } else {
+      fetch("/api/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      })
+        .then((r) => r.json())
+        .then((rec) => {
+          setAttendance((prev) => ({ ...prev, [userId]: rec }));
+        })
+        .catch(() => {});
+    }
   };
 
   return (
@@ -36,7 +64,7 @@ export default function PontajPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {users.map((u) => {
           const entry = attendance[u.id];
-          const isIn = entry && !entry.out;
+          const isIn = entry && !entry.clockOut;
 
           return (
             <div
@@ -49,9 +77,9 @@ export default function PontajPage() {
               <div className="text-sm text-gray-400 mb-3">{u.role}</div>
               {entry && (
                 <div className="text-sm text-gray-300 mb-3">
-                  <div>Intrare: {entry.in.toLocaleTimeString("ro-RO")}</div>
-                  {entry.out && (
-                    <div>Ieșire: {entry.out.toLocaleTimeString("ro-RO")}</div>
+                  <div>Intrare: {new Date(entry.clockIn).toLocaleTimeString("ro-RO")}</div>
+                  {entry.clockOut && (
+                    <div>Ieșire: {new Date(entry.clockOut).toLocaleTimeString("ro-RO")}</div>
                   )}
                 </div>
               )}

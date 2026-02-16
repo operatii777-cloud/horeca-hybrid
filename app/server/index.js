@@ -513,6 +513,16 @@ app.delete("/api/orders/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Order Item Ready (KDS) ---
+app.put("/api/orders/:orderId/items/:itemId/ready", async (req, res) => {
+  const item = await prisma.orderItem.update({
+    where: { id: Number(req.params.itemId) },
+    data: { ready: true },
+    include: { product: true },
+  });
+  res.json(item);
+});
+
 // --- Reports ---
 app.get("/api/reports/sales", async (req, res) => {
   const orders = await prisma.order.findMany({
@@ -527,6 +537,154 @@ app.get("/api/reports/sales", async (req, res) => {
     byPayMethod[method] = (byPayMethod[method] || 0) + o.total;
   }
   res.json({ totalSales, byPayMethod, orderCount: orders.length, orders });
+});
+
+// --- Reservations ---
+app.get("/api/reservations", async (_req, res) => {
+  const reservations = await prisma.reservation.findMany({ orderBy: { createdAt: "desc" } });
+  res.json(reservations);
+});
+
+app.post("/api/reservations", async (req, res) => {
+  const reservation = await prisma.reservation.create({ data: req.body });
+  res.json(reservation);
+});
+
+app.delete("/api/reservations/:id", async (req, res) => {
+  await prisma.reservation.delete({ where: { id: Number(req.params.id) } });
+  res.json({ ok: true });
+});
+
+// --- Feedback ---
+app.get("/api/feedback", async (_req, res) => {
+  const feedbacks = await prisma.feedback.findMany({ orderBy: { createdAt: "desc" } });
+  res.json(feedbacks);
+});
+
+app.post("/api/feedback", async (req, res) => {
+  const feedback = await prisma.feedback.create({ data: req.body });
+  res.json(feedback);
+});
+
+// --- HACCP ---
+app.get("/api/haccp", async (req, res) => {
+  const where = {};
+  if (req.query.date) where.date = req.query.date;
+  const checks = await prisma.hACCPCheck.findMany({ where, orderBy: { id: "asc" } });
+  res.json(checks);
+});
+
+app.post("/api/haccp", async (req, res) => {
+  const { date, itemId, checkedAt } = req.body;
+  const existing = await prisma.hACCPCheck.findFirst({ where: { date, itemId } });
+  if (existing) {
+    await prisma.hACCPCheck.delete({ where: { id: existing.id } });
+    res.json({ ok: true, removed: true });
+  } else {
+    const check = await prisma.hACCPCheck.create({ data: { date, itemId, checkedAt } });
+    res.json(check);
+  }
+});
+
+// --- Settings ---
+app.get("/api/settings", async (_req, res) => {
+  const settings = await prisma.setting.findMany();
+  const result = {};
+  for (const s of settings) {
+    result[s.key] = s.value;
+  }
+  res.json(result);
+});
+
+app.put("/api/settings", async (req, res) => {
+  const entries = Object.entries(req.body);
+  for (const [key, value] of entries) {
+    await prisma.setting.upsert({
+      where: { key },
+      update: { value: String(value) },
+      create: { key, value: String(value) },
+    });
+  }
+  const settings = await prisma.setting.findMany();
+  const result = {};
+  for (const s of settings) {
+    result[s.key] = s.value;
+  }
+  res.json(result);
+});
+
+// --- Shift Handover ---
+app.get("/api/shift-handovers", async (_req, res) => {
+  const handovers = await prisma.shiftHandover.findMany({ orderBy: { createdAt: "desc" } });
+  res.json(handovers);
+});
+
+app.post("/api/shift-handovers", async (req, res) => {
+  const handover = await prisma.shiftHandover.create({ data: req.body });
+  res.json(handover);
+});
+
+// --- Attendance (Pontaj) ---
+app.get("/api/attendance", async (_req, res) => {
+  const records = await prisma.attendance.findMany({
+    include: { user: true },
+    orderBy: { clockIn: "desc" },
+  });
+  res.json(records);
+});
+
+app.post("/api/attendance", async (req, res) => {
+  const { userId } = req.body;
+  const record = await prisma.attendance.create({
+    data: { userId },
+    include: { user: true },
+  });
+  res.json(record);
+});
+
+app.put("/api/attendance/:id/clock-out", async (req, res) => {
+  const record = await prisma.attendance.update({
+    where: { id: Number(req.params.id) },
+    data: { clockOut: new Date() },
+    include: { user: true },
+  });
+  res.json(record);
+});
+
+// --- Waste ---
+app.get("/api/waste", async (_req, res) => {
+  const entries = await prisma.wasteEntry.findMany({
+    include: { product: true },
+    orderBy: { createdAt: "desc" },
+  });
+  res.json(entries);
+});
+
+app.post("/api/waste", async (req, res) => {
+  const { productId, quantity, reason, date } = req.body;
+  const entry = await prisma.wasteEntry.create({
+    data: { productId, quantity, reason, date },
+    include: { product: true },
+  });
+  res.json(entry);
+});
+
+// --- Bon Consum (Consumption Voucher) ---
+app.get("/api/bon-consum", async (_req, res) => {
+  const vouchers = await prisma.consumptionVoucher.findMany({
+    include: { product: true },
+    orderBy: { createdAt: "desc" },
+  });
+  res.json(vouchers);
+});
+
+app.post("/api/bon-consum", async (req, res) => {
+  const { productId, quantity, reason } = req.body;
+  const voucher = await prisma.consumptionVoucher.create({
+    data: { productId, quantity, reason },
+    include: { product: true },
+  });
+  res.json(voucher);
 });
 
 const PORT = process.env.PORT || 3001;

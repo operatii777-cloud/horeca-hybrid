@@ -11,6 +11,7 @@ export default function BonConsumPage() {
 
   useEffect(() => {
     fetch("/api/products").then((r) => r.json()).then(setProducts).catch(() => {});
+    fetch("/api/bon-consum").then((r) => r.json()).then(setVouchers).catch(() => {});
   }, []);
 
   const reasons = ["pierdere", "consum intern", "test"];
@@ -18,19 +19,21 @@ export default function BonConsumPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.productId) return;
-    const product = products.find((p) => p.id === Number(form.productId));
-    setVouchers((prev) => [
-      {
-        id: Date.now(),
-        productName: product?.name || "—",
+    fetch("/api/bon-consum", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         productId: Number(form.productId),
         quantity: form.quantity,
         reason: form.reason,
-        date: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-    setForm({ productId: "", quantity: 1, reason: "consum intern" });
+      }),
+    })
+      .then((r) => r.json())
+      .then((v) => {
+        setVouchers((prev) => [v, ...prev]);
+        setForm({ productId: "", quantity: 1, reason: "consum intern" });
+      })
+      .catch(() => {});
   };
 
   return (
@@ -94,11 +97,11 @@ export default function BonConsumPage() {
               <tbody>
                 {vouchers.map((v) => (
                   <tr key={v.id} className="border-b border-gray-700/50">
-                    <td className="py-2 font-semibold">{v.productName}</td>
+                    <td className="py-2 font-semibold">{v.product?.name || "—"}</td>
                     <td className="py-2 text-red-400">-{v.quantity}</td>
                     <td className="py-2 text-gray-300">{v.reason}</td>
                     <td className="py-2 text-gray-400">
-                      {new Date(v.date).toLocaleString("ro-RO")}
+                      {new Date(v.createdAt).toLocaleString("ro-RO")}
                     </td>
                   </tr>
                 ))}
