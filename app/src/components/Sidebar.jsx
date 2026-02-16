@@ -1,59 +1,127 @@
 import { useState } from "react";
 
+/* ─── Menu structure mirroring restaurant-horeca-app KioskSidebar ─── */
+
 const ADMIN_NAV = [
+  {
+    id: "operational",
+    label: "Operațional",
+    icon: "⚡",
+    children: [
+      { id: "dashboard", label: "Dashboard", icon: "📊" },
+      { id: "pos", label: "POS Vânzare", icon: "🛒" },
+      { id: "table-plan", label: "Plan Mese", icon: "🗺️" },
+      { id: "kds-kitchen", label: "KDS Bucătărie", icon: "👨‍🍳" },
+      { id: "kds-bar", label: "KDS Bar", icon: "🍺" },
+      { id: "scoreboard", label: "Scoreboard Bucătărie", icon: "🏆" },
+      { id: "pontaj", label: "Pontaj (Time Clock)", icon: "⏱️" },
+      { id: "staff-report", label: "Raport Ospătari Live", icon: "📋" },
+    ],
+  },
+  {
+    id: "front-desk",
+    label: "Front Desk",
+    icon: "🛎️",
+    children: [
+      { id: "reservations", label: "Rezervări", icon: "📅" },
+      { id: "client-monitor", label: "Monitor Clienți", icon: "🖥️" },
+    ],
+  },
   {
     id: "gestiune",
     label: "Gestiune",
     icon: "📦",
     children: [
-      { id: "products", label: "Produse", icon: "🛒" },
-      { id: "recipes", label: "Rețete", icon: "📖" },
-      { id: "suppliers", label: "Furnizori", icon: "🏭" },
+      { id: "products", label: "Catalog Produse", icon: "🛒" },
+      { id: "recipes", label: "Rețetar & Fișe", icon: "📖" },
+      { id: "stock", label: "Stocuri", icon: "📊" },
       { id: "nir", label: "NIR", icon: "📥" },
-      { id: "transfers", label: "Transfer", icon: "🔄" },
-      { id: "returs", label: "Retur", icon: "↩️" },
+      { id: "bon-consum", label: "Bon Consum", icon: "📄" },
       { id: "inventory", label: "Inventar", icon: "📋" },
-      { id: "stock", label: "Stoc", icon: "📊" },
+      { id: "transfers", label: "Transferuri", icon: "🔄" },
+      { id: "returs", label: "Retur", icon: "↩️" },
+      { id: "waste", label: "Waste", icon: "🗑️" },
+      { id: "suppliers", label: "Furnizori", icon: "🚚" },
+      { id: "haccp", label: "HACCP & Igienizare", icon: "✅" },
       { id: "categories", label: "Categorii", icon: "🏷️" },
       { id: "departments", label: "Departamente", icon: "🏢" },
-      { id: "users", label: "Utilizatori", icon: "👥" },
     ],
   },
   {
-    id: "vanzare",
-    label: "Vânzare POS",
-    icon: "💰",
-    children: [
-      { id: "pos", label: "Comandă Nouă", icon: "➕" },
-      { id: "orders", label: "Comenzi Deschise", icon: "📝" },
-      { id: "order-history", label: "Istoric Comenzi", icon: "📜" },
-    ],
-  },
-  { id: "tv-monitor", label: "TV Monitor", icon: "📺" },
-  {
-    id: "rapoarte",
-    label: "Rapoarte",
-    icon: "📊",
+    id: "administrare",
+    label: "Administrare",
+    icon: "⚙️",
     children: [
       { id: "reports", label: "Raport Vânzări", icon: "💹" },
+      { id: "report-x", label: "Raport X", icon: "📈" },
+      { id: "report-z", label: "Raport Z", icon: "📉" },
+      { id: "shift-handover", label: "Jurnal Tură", icon: "📓" },
+      { id: "orders", label: "Comenzi Deschise", icon: "📝" },
+      { id: "order-history", label: "Istoric Comenzi", icon: "📜" },
+      { id: "users", label: "Ospătari & Staff", icon: "👥" },
+      { id: "settings", label: "Setări", icon: "🔧" },
     ],
   },
-  { id: "manual", label: "Manual Instrucțiuni", icon: "📘" },
+  {
+    id: "it-security",
+    label: "IT & Securitate",
+    icon: "🔒",
+    children: [
+      { id: "audit-log", label: "Audit Logs", icon: "🛡️" },
+    ],
+  },
+  {
+    id: "display",
+    label: "Display",
+    icon: "📺",
+    children: [
+      { id: "kiosk-self-service", label: "Self-Service Kiosk", icon: "🖱️" },
+      { id: "feedback-terminal", label: "Feedback Terminal", icon: "😊" },
+      { id: "tv-monitor", label: "TV Monitor Comenzi", icon: "📺" },
+      { id: "menu-tv", label: "TV Meniu Digital", icon: "🎬" },
+      { id: "customer-display", label: "Display Client (CDS)", icon: "🖥️" },
+    ],
+  },
+  {
+    id: "suport",
+    label: "Suport",
+    icon: "❓",
+    children: [
+      { id: "manual", label: "Manual Utilizare", icon: "📘" },
+    ],
+  },
 ];
 
 const WAITER_NAV = [
   {
-    id: "vanzare",
-    label: "Vânzare POS",
-    icon: "💰",
+    id: "operational",
+    label: "Operațional",
+    icon: "⚡",
     children: [
-      { id: "pos", label: "Comandă Nouă", icon: "➕" },
+      { id: "pos", label: "POS Vânzare", icon: "🛒" },
+      { id: "table-plan", label: "Plan Mese", icon: "🗺️" },
       { id: "orders", label: "Comenzi Deschise", icon: "📝" },
       { id: "order-history", label: "Istoric Comenzi", icon: "📜" },
     ],
   },
-  { id: "tv-monitor", label: "TV Monitor", icon: "📺" },
-  { id: "manual", label: "Manual Instrucțiuni", icon: "📘" },
+  {
+    id: "display",
+    label: "Display",
+    icon: "📺",
+    children: [
+      { id: "kds-kitchen", label: "KDS Bucătărie", icon: "👨‍🍳" },
+      { id: "kds-bar", label: "KDS Bar", icon: "🍺" },
+      { id: "tv-monitor", label: "TV Monitor Comenzi", icon: "📺" },
+    ],
+  },
+  {
+    id: "suport",
+    label: "Suport",
+    icon: "❓",
+    children: [
+      { id: "manual", label: "Manual Utilizare", icon: "📘" },
+    ],
+  },
 ];
 
 function NavMenuItem({ item, depth = 0, activeView, onNavigate }) {
