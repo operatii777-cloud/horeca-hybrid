@@ -12,7 +12,7 @@ app.use(express.json({ limit: "1mb" }));
 // Helper: safe parseInt with validation
 function safeId(val) {
   const n = Number(val);
-  if (!Number.isFinite(n) || n < 1) return null;
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) return null;
   return n;
 }
 
@@ -212,8 +212,14 @@ app.delete("/api/suppliers/:id", async (req, res) => {
 app.get("/api/products", async (req, res) => {
   try {
     const where = {};
-    if (req.query.departmentId) where.departmentId = Number(req.query.departmentId);
-    if (req.query.categoryId) where.categoryId = Number(req.query.categoryId);
+    if (req.query.departmentId) {
+      const dId = safeId(req.query.departmentId);
+      if (dId) where.departmentId = dId;
+    }
+    if (req.query.categoryId) {
+      const cId = safeId(req.query.categoryId);
+      if (cId) where.categoryId = cId;
+    }
     const products = await prisma.product.findMany({
       where,
       include: { department: true, category: true, stockItems: true },
@@ -281,7 +287,10 @@ app.delete("/api/products/:id", async (req, res) => {
 app.get("/api/stock", async (req, res) => {
   try {
     const where = {};
-    if (req.query.departmentId) where.departmentId = Number(req.query.departmentId);
+    if (req.query.departmentId) {
+      const dId = safeId(req.query.departmentId);
+      if (dId) where.departmentId = dId;
+    }
     const stock = await prisma.stock.findMany({
       where,
       include: { product: true, department: true },
@@ -553,7 +562,10 @@ app.post("/api/inventories", async (req, res) => {
 
     // Get current stock for the department
     const where = {};
-    if (departmentId) where.departmentId = Number(departmentId);
+    if (departmentId) {
+      const dId = safeId(departmentId);
+      if (dId) where.departmentId = dId;
+    }
     const stockItems = await prisma.stock.findMany({
       where,
       include: { product: true },
@@ -618,7 +630,10 @@ app.get("/api/orders", async (req, res) => {
   try {
     const where = {};
     if (req.query.status) where.status = req.query.status;
-    if (req.query.userId) where.userId = Number(req.query.userId);
+    if (req.query.userId) {
+      const uId = safeId(req.query.userId);
+      if (uId) where.userId = uId;
+    }
     const orders = await prisma.order.findMany({
       where,
       include: orderInclude,
