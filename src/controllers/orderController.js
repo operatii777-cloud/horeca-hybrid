@@ -4,6 +4,7 @@
  */
 
 const orderService = require('../services/orderService');
+const { validateOrder } = require('../utils/validation');
 
 const orderController = {
   async getOrders(req, res, next) {
@@ -17,6 +18,14 @@ const orderController = {
 
   async createOrder(req, res, next) {
     try {
+      const validation = validateOrder(req.body);
+      if (!validation.isValid) {
+        return res.status(400).json({ 
+          success: false, 
+          errors: validation.errors 
+        });
+      }
+
       const newOrder = await orderService.createOrder(req.body);
       res.status(201).json({ success: true, data: newOrder });
     } catch (error) {
@@ -26,6 +35,14 @@ const orderController = {
 
   async updateOrder(req, res, next) {
     try {
+      const validation = validateOrder(req.body);
+      if (!validation.isValid) {
+        return res.status(400).json({ 
+          success: false, 
+          errors: validation.errors 
+        });
+      }
+
       const updatedOrder = await orderService.updateOrder(req.params.id, req.body);
       res.json({ success: true, data: updatedOrder });
     } catch (error) {
