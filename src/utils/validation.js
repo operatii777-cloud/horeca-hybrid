@@ -9,8 +9,8 @@ const validateMenuItem = (item) => {
     errors.push('Name is required');
   }
 
-  if (!item.price || item.price <= 0) {
-    errors.push('Price must be greater than 0');
+  if (item.price === null || item.price === undefined || typeof item.price !== 'number' || item.price <= 0) {
+    errors.push('Price must be a number greater than 0');
   }
 
   if (!item.category || item.category.trim() === '') {
@@ -26,7 +26,7 @@ const validateMenuItem = (item) => {
 const validateOrder = (order) => {
   const errors = [];
 
-  if (!order.tableNumber) {
+  if (order.tableNumber === null || order.tableNumber === undefined) {
     errors.push('Table number is required');
   }
 
@@ -43,12 +43,12 @@ const validateOrder = (order) => {
 const validateTable = (table) => {
   const errors = [];
 
-  if (!table.number) {
+  if (table.number === null || table.number === undefined) {
     errors.push('Table number is required');
   }
 
-  if (!table.capacity || table.capacity <= 0) {
-    errors.push('Capacity must be greater than 0');
+  if (table.capacity === null || table.capacity === undefined || typeof table.capacity !== 'number' || table.capacity <= 0) {
+    errors.push('Capacity must be a number greater than 0');
   }
 
   return {
