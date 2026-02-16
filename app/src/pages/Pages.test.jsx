@@ -15,7 +15,7 @@ const mockProducts = [
 ];
 
 const mockOrders = [
-  { id: 1, tableNr: 5, status: "open", total: 40, source: "pos", payMethod: null, createdAt: new Date().toISOString(), closedAt: null, userId: 1, user: { id: 1, name: "Admin", role: "admin" }, items: [
+  { id: 1, tableNr: 5, status: "open", total: 40, source: "pos", payMethod: null, createdAt: "2024-01-01T10:00:00.000Z", closedAt: null, userId: 1, user: { id: 1, name: "Admin", role: "admin" }, items: [
     { id: 1, productId: 1, quantity: 1, price: 32, ready: false, product: { id: 1, name: "PIZZA MARGHERITA", department: { id: 1, name: "BUCATARIE" } } },
     { id: 2, productId: 2, quantity: 1, price: 8, ready: false, product: { id: 2, name: "COCA COLA", department: { id: 2, name: "BAR" } } },
   ] },

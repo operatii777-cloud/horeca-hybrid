@@ -12,7 +12,7 @@ app.use(express.json({ limit: "1mb" }));
 // Helper: safe parseInt with validation
 function safeId(val) {
   const n = Number(val);
-  if (!Number.isFinite(n) || n < 1) return null;
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1) return null;
   return n;
 }
 
