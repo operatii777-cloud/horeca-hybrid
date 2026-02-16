@@ -16,6 +16,8 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState([]);
   const [view, setView] = useState(initialView);
+  const [payConfirm, setPayConfirm] = useState(null); // order being paid
+  const [paySuccess, setPaySuccess] = useState(null); // successful payment info
 
   useEffect(() => {
     setView(initialView);
@@ -90,11 +92,15 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
   };
 
   const closeOrder = async (orderId, payMethod) => {
+    const order = orders.find((o) => o.id === orderId);
     await fetch(`/api/orders/${orderId}/close`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ payMethod }),
     });
+    setPayConfirm(null);
+    setPaySuccess({ orderId, payMethod, total: order?.total, tableNr: order?.tableNr });
+    setTimeout(() => setPaySuccess(null), 4000);
     loadOrders();
   };
 
@@ -105,6 +111,8 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
   const someItemsReady = (order) => {
     return order.items && order.items.some((i) => i.ready);
   };
+
+  const billRequestOrders = orders.filter((o) => o.payMethod && o.status !== "closed" && o.status !== "delivered");
 
   return (
     <div className={embedded ? "text-white" : "min-h-screen bg-gray-900 text-white"}>
@@ -141,6 +149,75 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
           </button>
         </div>
       </header>
+      )}
+
+      {/* Payment success overlay */}
+      {paySuccess && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-2xl p-8 border-2 border-green-500 text-center max-w-sm">
+            <div className="text-6xl mb-4">✅</div>
+            <div className="text-2xl font-bold text-green-400 mb-2">Plată confirmată!</div>
+            <div className="text-gray-300 mb-1">Comanda #{paySuccess.orderId} • Masa {paySuccess.tableNr}</div>
+            <div className="text-3xl font-bold text-white mb-2">{paySuccess.total} Lei</div>
+            <div className="text-sm text-gray-400">
+              Metoda: {PAY_METHODS.find((p) => p.id === paySuccess.payMethod)?.icon}{" "}
+              {PAY_METHODS.find((p) => p.id === paySuccess.payMethod)?.label}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment confirmation modal */}
+      {payConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-700 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">💰 Încasare Comandă #{payConfirm.id}</h2>
+              <button onClick={() => setPayConfirm(null)} className="text-gray-400 hover:text-white text-2xl">✕</button>
+            </div>
+
+            {/* Receipt summary */}
+            <div className="bg-gray-900 rounded-lg p-4 mb-4">
+              <div className="flex justify-between text-sm text-gray-400 mb-2">
+                <span>Masa {payConfirm.tableNr}</span>
+                <span>{payConfirm.source === "qr" ? "📱 QR" : payConfirm.source === "supervisor" ? "📋 Ospătar" : "🛒 POS"}</span>
+              </div>
+              <div className="space-y-1 border-t border-gray-700 pt-2">
+                {(payConfirm.items || []).map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span>{item.quantity}× {item.product?.name}</span>
+                    <span>{(item.price * item.quantity).toFixed(2)} lei</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-gray-700 mt-2 pt-2 flex justify-between text-xl font-bold">
+                <span>TOTAL:</span>
+                <span className="text-green-400">{(payConfirm.total || 0).toFixed(2)} Lei</span>
+              </div>
+            </div>
+
+            {payConfirm.payMethod && payConfirm.status === "open" && (
+              <div className="bg-amber-900/30 border border-amber-500 rounded-lg p-3 mb-4 text-center">
+                <div className="text-sm font-bold text-amber-400">🧾 Clientul a cerut nota</div>
+                <div className="text-xs text-gray-400">Preferință: {payConfirm.payMethod}</div>
+              </div>
+            )}
+
+            <div className="text-sm text-gray-400 mb-3 font-semibold">Selectați metoda de plată:</div>
+            <div className="grid grid-cols-2 gap-3">
+              {PAY_METHODS.map((pm) => (
+                <button
+                  key={pm.id}
+                  onClick={() => closeOrder(payConfirm.id, pm.id)}
+                  className={`px-4 py-3 rounded-xl text-sm font-bold ${pm.color} flex items-center justify-center gap-2`}
+                >
+                  <span className="text-lg">{pm.icon}</span>
+                  <span>{pm.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {view === "pos" ? (
@@ -268,6 +345,30 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
               <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Livrată</span>
             </div>
           </div>
+
+          {/* Bill request notifications */}
+          {billRequestOrders.length > 0 && (
+            <div className="mb-4 space-y-2">
+              {billRequestOrders.map((o) => (
+                <div key={o.id} className="bg-amber-900/30 border-2 border-amber-500 rounded-xl p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🧾</span>
+                    <div>
+                      <div className="font-bold text-amber-400">Masa {o.tableNr} — Notă cerută!</div>
+                      <div className="text-xs text-gray-400">Comanda #{o.id} • Preferință: {o.payMethod} • {o.total} Lei</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setPayConfirm(o)}
+                    className="bg-amber-600 hover:bg-amber-700 px-4 py-2 rounded-lg font-bold text-sm"
+                  >
+                    💰 Încasează
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {orders.length === 0 ? (
             <p className="text-gray-500">Nu sunt comenzi deschise.</p>
           ) : (
@@ -278,9 +379,11 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
                 const delivered = order.status === "delivered";
                 const elapsed = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000);
                 const sourceLabel = order.source === "qr" ? "📱 QR" : order.source === "supervisor" ? "📋 Ospătar" : "🛒 POS";
+                const hasBillRequest = order.payMethod && order.status === "open";
 
                 let borderClass = "border-yellow-500/50";
-                if (delivered) borderClass = "border-blue-500";
+                if (hasBillRequest) borderClass = "border-amber-500";
+                else if (delivered) borderClass = "border-blue-500";
                 else if (ready) borderClass = "border-green-500";
 
                 return (
@@ -295,6 +398,13 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
                         <span className="text-sm text-gray-400">#{order.id}</span>
                       </div>
                     </div>
+
+                    {/* Bill request badge */}
+                    {hasBillRequest && (
+                      <div className="mb-2 bg-amber-900/30 border border-amber-500 rounded-lg px-3 py-1.5 text-center">
+                        <span className="text-xs font-bold text-amber-400">🧾 Nota cerută — {order.payMethod}</span>
+                      </div>
+                    )}
 
                     {/* Status badge */}
                     <div className="mb-3">
@@ -347,23 +457,15 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
                       )}
 
                       {delivered && (
-                        <div>
-                          <div className="text-xs text-gray-400 mb-2 font-semibold">Încasare:</div>
-                          <div className="grid grid-cols-2 gap-2">
-                            {PAY_METHODS.map((pm) => (
-                              <button
-                                key={pm.id}
-                                onClick={() => closeOrder(order.id, pm.id)}
-                                className={`px-2 py-1.5 rounded-lg text-xs font-medium ${pm.color}`}
-                              >
-                                {pm.icon} {pm.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        <button
+                          onClick={() => setPayConfirm(order)}
+                          className="w-full px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-500 text-sm font-bold"
+                        >
+                          💰 Încasează ({order.total} Lei)
+                        </button>
                       )}
 
-                      {!delivered && !ready && (
+                      {!delivered && !ready && !hasBillRequest && (
                         <div className="text-center text-xs text-gray-400 py-1">
                           Așteptăm pregătirea în bucătărie/bar...
                         </div>

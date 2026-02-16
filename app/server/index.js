@@ -521,6 +521,35 @@ app.put("/api/orders/:id/close", async (req, res) => {
   res.json(order);
 });
 
+// --- Add items to existing order ---
+app.post("/api/orders/:id/items", async (req, res) => {
+  const orderId = Number(req.params.id);
+  const { items } = req.body;
+  for (const item of items) {
+    await prisma.orderItem.create({
+      data: { orderId, productId: item.productId, quantity: item.quantity, price: item.price },
+    });
+  }
+  const addedTotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const order = await prisma.order.update({
+    where: { id: orderId },
+    data: { total: { increment: addedTotal } },
+    include: orderInclude,
+  });
+  res.json(order);
+});
+
+// --- Request bill (mark order as requesting payment) ---
+app.put("/api/orders/:id/request-bill", async (req, res) => {
+  const { preferredPayment } = req.body;
+  const order = await prisma.order.update({
+    where: { id: Number(req.params.id) },
+    data: { payMethod: preferredPayment || null },
+    include: orderInclude,
+  });
+  res.json(order);
+});
+
 app.delete("/api/orders/:id", async (req, res) => {
   const orderId = Number(req.params.id);
   await prisma.orderItem.deleteMany({ where: { orderId } });

@@ -12,7 +12,7 @@ export default function DashboardPage() {
   }, []);
 
   const today = new Date().toDateString();
-  const openOrders = orders.filter((o) => o.status === "open");
+  const openOrders = orders.filter((o) => o.status === "open" || o.status === "delivered");
   const closedToday = orders.filter(
     (o) => o.status === "closed" && o.closedAt && new Date(o.closedAt).toDateString() === today
   );

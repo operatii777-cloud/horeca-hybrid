@@ -8,17 +8,24 @@ export default function ComandaSupervisorPage({ user }) {
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState([]);
   const [sent, setSent] = useState(false);
+  const [showTableOrder, setShowTableOrder] = useState(false);
 
   useEffect(() => {
     fetch("/api/products").then((r) => r.json()).then(setProducts).catch(() => {});
     fetch("/api/categories").then((r) => r.json()).then(setCategories).catch(() => {});
     loadOrders();
+    const interval = setInterval(loadOrders, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadOrders = () => {
-    fetch("/api/orders?status=open")
-      .then((r) => r.json())
-      .then(setOrders)
+    Promise.all([
+      fetch("/api/orders?status=open").then((r) => r.json()),
+      fetch("/api/orders?status=delivered").then((r) => r.json()),
+    ])
+      .then(([openOrders, deliveredOrders]) => {
+        setOrders([...openOrders, ...deliveredOrders]);
+      })
       .catch(() => {});
   };
 
@@ -53,28 +60,53 @@ export default function ComandaSupervisorPage({ user }) {
   const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
 
   const occupiedTables = new Set(orders.map((o) => o.tableNr));
+  const tableOrder = orders.find((o) => o.tableNr === tableNr);
 
   const handleOrder = () => {
     if (cart.length === 0) return;
-    fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tableNr,
-        userId: user?.id || 1,
-        source: "supervisor",
-        items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price })),
-      }),
-    })
-      .then((r) => r.json())
-      .then(() => {
-        setCart([]);
-        setSent(true);
-        loadOrders();
-        setTimeout(() => setSent(false), 3000);
+
+    if (tableOrder && tableOrder.status === "open") {
+      // Add items to existing order
+      fetch(`/api/orders/${tableOrder.id}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price })),
+        }),
       })
-      .catch(() => {});
+        .then((r) => r.json())
+        .then(() => {
+          setCart([]);
+          setSent(true);
+          loadOrders();
+          setTimeout(() => setSent(false), 3000);
+        })
+        .catch(() => {});
+    } else {
+      // Create new order
+      fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tableNr,
+          userId: user?.id || 1,
+          source: "supervisor",
+          items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price })),
+        }),
+      })
+        .then((r) => r.json())
+        .then(() => {
+          setCart([]);
+          setSent(true);
+          loadOrders();
+          setTimeout(() => setSent(false), 3000);
+        })
+        .catch(() => {});
+    }
   };
+
+  const readyCount = tableOrder ? (tableOrder.items || []).filter((i) => i.ready).length : 0;
+  const totalItems = tableOrder ? (tableOrder.items || []).length : 0;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col">
@@ -118,6 +150,52 @@ export default function ComandaSupervisorPage({ user }) {
               ))}
             </div>
           </div>
+
+          {/* Existing order info for this table */}
+          {tableOrder && (
+            <div className="mx-3 mt-3 bg-gray-800 rounded-xl border border-gray-700 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-blue-400">Comanda #{tableOrder.id}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                    tableOrder.status === "delivered" ? "bg-blue-600" :
+                    readyCount === totalItems && totalItems > 0 ? "bg-green-600" : "bg-yellow-600"
+                  }`}>
+                    {tableOrder.status === "delivered" ? "Livrată" :
+                     readyCount === totalItems && totalItems > 0 ? "Gata" : `${readyCount}/${totalItems} gata`}
+                  </span>
+                  {tableOrder.payMethod && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-amber-900/50 text-amber-300">
+                      🧾 Nota cerută ({tableOrder.payMethod})
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowTableOrder(!showTableOrder)}
+                  className="text-xs text-gray-400 hover:text-white px-2 py-1 bg-gray-700 rounded"
+                >
+                  {showTableOrder ? "Ascunde" : "Detalii"}
+                </button>
+              </div>
+              {showTableOrder && (
+                <div className="space-y-1 mt-2 border-t border-gray-700 pt-2">
+                  {(tableOrder.items || []).map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm">
+                      <span className="flex items-center gap-1">
+                        {item.ready ? <span className="text-green-400">✓</span> : <span className="text-yellow-400">⏳</span>}
+                        {item.quantity}× {item.product?.name}
+                      </span>
+                      <span className="text-gray-400">{(item.price * item.quantity).toFixed(2)} lei</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between font-bold pt-2 border-t border-gray-700">
+                    <span>Total:</span>
+                    <span className="text-green-400">{(tableOrder.total || 0).toFixed(2)} lei</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Category filter */}
           <div className="p-3">
@@ -163,7 +241,9 @@ export default function ComandaSupervisorPage({ user }) {
         <div className="w-72 bg-gray-800 border-l border-gray-700 flex flex-col">
           <div className="p-3 border-b border-gray-700 bg-blue-900/30">
             <div className="font-bold text-lg">Masa {tableNr}</div>
-            <div className="text-sm text-gray-400">{cart.length} produse</div>
+            <div className="text-sm text-gray-400">
+              {tableOrder ? `Comandă existentă #${tableOrder.id}` : "Comandă nouă"} • {cart.length} produse noi
+            </div>
           </div>
 
           <div className="flex-1 overflow-auto p-3">
@@ -212,7 +292,7 @@ export default function ComandaSupervisorPage({ user }) {
               disabled={cart.length === 0}
               className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 disabled:bg-gray-600 disabled:cursor-not-allowed font-bold text-lg transition-colors"
             >
-              📤 Trimite
+              {tableOrder && tableOrder.status === "open" ? "➕ Adaugă la comandă" : "📤 Trimite"}
             </button>
           </div>
         </div>
