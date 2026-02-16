@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function ReservationsPage() {
   const [reservations, setReservations] = useState([]);
@@ -11,18 +11,32 @@ export default function ReservationsPage() {
     phone: "",
   });
 
+  useEffect(() => {
+    fetch("/api/reservations").then((r) => r.json()).then(setReservations).catch(() => {});
+  }, []);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name || !form.date || !form.time) return;
-    setReservations((prev) => [
-      ...prev,
-      { ...form, id: Date.now(), createdAt: new Date().toISOString() },
-    ]);
-    setForm({ name: "", date: "", time: "", guests: 1, tableNr: 1, phone: "" });
+    fetch("/api/reservations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    })
+      .then((r) => r.json())
+      .then((r) => {
+        setReservations((prev) => [r, ...prev]);
+        setForm({ name: "", date: "", time: "", guests: 1, tableNr: 1, phone: "" });
+      })
+      .catch(() => {});
   };
 
   const removeReservation = (id) => {
-    setReservations((prev) => prev.filter((r) => r.id !== id));
+    fetch(`/api/reservations/${id}`, { method: "DELETE" })
+      .then(() => {
+        setReservations((prev) => prev.filter((r) => r.id !== id));
+      })
+      .catch(() => {});
   };
 
   return (

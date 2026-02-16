@@ -12,8 +12,9 @@ model User {
   name      String
   pin       String   @unique
   role      String   // "admin" or "waiter"
-  createdAt DateTime @default(now())
-  orders    Order[]
+  createdAt   DateTime     @default(now())
+  orders      Order[]
+  attendances Attendance[]
 }
 
 model Department {
@@ -53,8 +54,10 @@ model Product {
   recipeItems      RecipeItem[]
   nirItems     NIRItem[]
   transferItems TransferItem[]
-  returItems   ReturItem[]
-  inventoryItems InventoryItem[]
+  returItems       ReturItem[]
+  inventoryItems   InventoryItem[]
+  wasteEntries     WasteEntry[]
+  consumptionVouchers ConsumptionVoucher[]
 }
 
 model Stock {
@@ -161,9 +164,11 @@ model Order {
   id        Int         @id @default(autoincrement())
   tableNr   Int
   userId    Int
-  status    String      @default("open") // "open", "closed", "cancelled"
+  status    String      @default("open") // "open", "delivered", "closed", "cancelled"
   total     Float       @default(0)
-  payMethod String?     // "CASH", "CARD"
+  payMethod String?     // "CASH", "CARD", "VOUCHER", "DISCOUNT", "PROTOCOL"
+  source    String      @default("pos") // "pos", "qr", "supervisor"
+  notes     String      @default("")
   createdAt DateTime    @default(now())
   closedAt  DateTime?
   user      User        @relation(fields: [userId], references: [id])
@@ -171,11 +176,88 @@ model Order {
 }
 
 model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int
+  id          Int     @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  quantity    Int     @default(1)
+  price       Float
+  ready       Boolean @default(false)
+  personLabel String  @default("")
+  order       Order   @relation(fields: [orderId], references: [id])
+  product     Product @relation(fields: [productId], references: [id])
+}
+
+model WaiterCall {
+  id        Int      @id @default(autoincrement())
+  tableNr   Int
+  type      String   @default("call") // "call", "bill", "help"
+  status    String   @default("pending") // "pending", "acknowledged"
+  createdAt DateTime @default(now())
+}
+
+model Reservation {
+  id        Int      @id @default(autoincrement())
+  name      String
+  date      String
+  time      String
+  guests    Int      @default(1)
+  tableNr   Int
+  phone     String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  rating    Int
+  comment   String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model HACCPCheck {
+  id        Int      @id @default(autoincrement())
+  date      String
+  itemId    Int
+  checked   Boolean  @default(true)
+  checkedAt String
+}
+
+model Setting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
+
+model ShiftHandover {
+  id          Int      @id @default(autoincrement())
+  notes       String   @default("")
+  cashInDrawer String  @default("")
+  issues      String   @default("")
+  createdAt   DateTime @default(now())
+}
+
+model Attendance {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  clockIn   DateTime  @default(now())
+  clockOut  DateTime?
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+model WasteEntry {
+  id        Int      @id @default(autoincrement())
   productId Int
-  quantity  Int     @default(1)
-  price     Float
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  quantity  Float
+  reason    String
+  date      String
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model ConsumptionVoucher {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  quantity  Float
+  reason    String
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
 }

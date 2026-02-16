@@ -12,28 +12,33 @@ export default function WastePage() {
 
   useEffect(() => {
     fetch("/api/products").then((r) => r.json()).then(setProducts).catch(() => {});
+    fetch("/api/waste").then((r) => r.json()).then(setEntries).catch(() => {});
   }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.productId || !form.reason) return;
-    const product = products.find((p) => p.id === Number(form.productId));
-    setEntries((prev) => [
-      {
-        id: Date.now(),
-        productName: product?.name || "—",
+    fetch("/api/waste", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         productId: Number(form.productId),
         quantity: form.quantity,
         reason: form.reason,
         date: form.date,
-      },
-      ...prev,
-    ]);
-    setForm({ productId: "", quantity: 1, reason: "", date: new Date().toISOString().slice(0, 10) });
+      }),
+    })
+      .then((r) => r.json())
+      .then((entry) => {
+        setEntries((prev) => [entry, ...prev]);
+        setForm({ productId: "", quantity: 1, reason: "", date: new Date().toISOString().slice(0, 10) });
+      })
+      .catch(() => {});
   };
 
   const summary = entries.reduce((acc, e) => {
-    acc[e.productName] = (acc[e.productName] || 0) + e.quantity;
+    const name = e.product?.name || "—";
+    acc[name] = (acc[name] || 0) + e.quantity;
     return acc;
   }, {});
 
@@ -118,7 +123,7 @@ export default function WastePage() {
               <tbody>
                 {entries.map((e) => (
                   <tr key={e.id} className="border-b border-gray-700/50">
-                    <td className="py-2 font-semibold">{e.productName}</td>
+                    <td className="py-2 font-semibold">{e.product?.name || "—"}</td>
                     <td className="py-2 text-red-400">-{e.quantity}</td>
                     <td className="py-2 text-gray-300">{e.reason}</td>
                     <td className="py-2 text-gray-400">{e.date}</td>

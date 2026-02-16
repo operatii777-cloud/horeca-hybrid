@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
+import { AllCommunityModule, ModuleRegistry, themeQuartz, colorSchemeDark } from "ag-grid-community";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
+
+const agDarkTheme = themeQuartz.withPart(colorSchemeDark);
 
 const tabs = [
   { id: "products", label: "Produse" },
@@ -175,8 +177,8 @@ function ProductsTab() {
         </select>
         <button type="submit" className="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg text-sm font-medium">Adaugă</button>
       </form>
-      <div className="ag-theme-alpine-dark" style={{ height: "calc(100vh - 220px)" }}>
-        <AgGridReact rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
+      <div style={{ height: "calc(100vh - 220px)" }}>
+        <AgGridReact theme={agDarkTheme} rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
       </div>
     </div>
   );
@@ -313,8 +315,8 @@ function SuppliersTab() {
         <input placeholder="Denumire furnizor" value={name} onChange={(e) => setName(e.target.value)} className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm" />
         <button type="submit" className="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg text-sm font-medium">Adaugă</button>
       </form>
-      <div className="ag-theme-alpine-dark" style={{ height: "calc(100vh - 220px)" }}>
-        <AgGridReact rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
+      <div style={{ height: "calc(100vh - 220px)" }}>
+        <AgGridReact theme={agDarkTheme} rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
       </div>
     </div>
   );
@@ -732,8 +734,8 @@ function StockTab() {
           {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
       </div>
-      <div className="ag-theme-alpine-dark" style={{ height: "calc(100vh - 220px)" }}>
-        <AgGridReact rowData={rowData} columnDefs={columnDefs} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
+      <div style={{ height: "calc(100vh - 220px)" }}>
+        <AgGridReact theme={agDarkTheme} rowData={rowData} columnDefs={columnDefs} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
       </div>
     </div>
   );
@@ -779,8 +781,8 @@ function CategoriesTab() {
         <input placeholder="Denumire categorie" value={name} onChange={(e) => setName(e.target.value)} className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm" />
         <button type="submit" className="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg text-sm font-medium">Adaugă</button>
       </form>
-      <div className="ag-theme-alpine-dark" style={{ height: "calc(100vh - 220px)" }}>
-        <AgGridReact rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
+      <div style={{ height: "calc(100vh - 220px)" }}>
+        <AgGridReact theme={agDarkTheme} rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
       </div>
     </div>
   );
@@ -826,8 +828,8 @@ function DepartmentsTab() {
         <input placeholder="Denumire departament" value={name} onChange={(e) => setName(e.target.value)} className="bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-sm" />
         <button type="submit" className="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg text-sm font-medium">Adaugă</button>
       </form>
-      <div className="ag-theme-alpine-dark" style={{ height: "calc(100vh - 220px)" }}>
-        <AgGridReact rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
+      <div style={{ height: "calc(100vh - 220px)" }}>
+        <AgGridReact theme={agDarkTheme} rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
       </div>
     </div>
   );
@@ -852,8 +854,8 @@ function OrdersTab() {
   ], []);
 
   return (
-    <div className="ag-theme-alpine-dark" style={{ height: "calc(100vh - 180px)" }}>
-      <AgGridReact rowData={rowData} columnDefs={columnDefs} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
+    <div style={{ height: "calc(100vh - 180px)" }}>
+      <AgGridReact theme={agDarkTheme} rowData={rowData} columnDefs={columnDefs} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
     </div>
   );
 }
@@ -916,8 +918,8 @@ function UsersTab() {
   }, []);
 
   return (
-    <div className="ag-theme-alpine-dark" style={{ height: "calc(100vh - 180px)" }}>
-      <AgGridReact rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
+    <div style={{ height: "calc(100vh - 180px)" }}>
+      <AgGridReact theme={agDarkTheme} rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
     </div>
   );
 }
