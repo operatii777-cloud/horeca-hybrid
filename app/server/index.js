@@ -852,7 +852,7 @@ app.get("/api/call-waiter", async (_req, res) => {
 app.post("/api/call-waiter", async (req, res) => {
   try {
     const { tableNr, type } = req.body;
-    if (!tableNr) return res.status(400).json({ error: "tableNr is required" });
+    if (tableNr == null || typeof tableNr !== "number") return res.status(400).json({ error: "tableNr is required" });
     const call = await prisma.waiterCall.create({
       data: { tableNr, type: type || "call" },
     });

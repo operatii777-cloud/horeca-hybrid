@@ -257,7 +257,7 @@ export default function ComandaSupervisorPage({ user }) {
           {tableCalls.length > 0 && (
             <div className="mx-3 mt-2 bg-amber-900/30 border border-amber-600 rounded-xl p-3 flex items-center justify-between">
               <span className="text-sm text-amber-300 font-bold">🔔 Clientul de la masa {tableNr} a chemat ospătarul</span>
-              <button onClick={() => tableCalls.forEach((c) => acknowledgeCall(c.id))}
+              <button onClick={() => Promise.all(tableCalls.map((c) => acknowledgeCall(c.id))).catch(() => {})}
                 className="px-3 py-1 bg-green-700 hover:bg-green-600 rounded text-xs font-bold">
                 ✓ Am preluat
               </button>
