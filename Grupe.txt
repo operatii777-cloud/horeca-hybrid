@@ -1,0 +1,10 @@
+Bucatarie
+Bar
+Alcoolice
+Materiale auxiliare
+Gestiune papetarie
+Stoc mort
+Gestiune control
+Gestiune comune
+DEP 9
+DEP 10

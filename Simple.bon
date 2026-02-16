@@ -1,0 +1,22 @@
+KARAT
+; sell article
+;article name 24 simbols
+;(17-24 nonprintable)
+*AEMMF REL3001   ********098000000000001000100
+*PAPER ROLL TERM.********000245000000012000100
+; rabat
+-0008000001
+; adaos
++0001000001
+; free text 22 simbols
+;(17-22 nonprintable)
+P  CITOPLAST     ******
+P 1000 m 125,40  ******
+; sell free sum
+S001254000100
+P* * * * * * * *
+P*DEMONSTRATION*
+P* * * * * * * *
+T0000010000  CASH
+END KARAT
+
