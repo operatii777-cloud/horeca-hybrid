@@ -223,18 +223,17 @@ app.post("/api/nir", async (req, res) => {
 
   // Increase stock for each NIR item
   for (const item of nir.items) {
-    const product = await prisma.product.findUnique({ where: { id: item.productId } });
     await prisma.stock.upsert({
       where: {
         productId_departmentId: {
           productId: item.productId,
-          departmentId: product.departmentId,
+          departmentId: item.product.departmentId,
         },
       },
       update: { quantity: { increment: item.quantity } },
       create: {
         productId: item.productId,
-        departmentId: product.departmentId,
+        departmentId: item.product.departmentId,
         quantity: item.quantity,
       },
     });
@@ -337,18 +336,17 @@ app.post("/api/returs", async (req, res) => {
 
   // Decrease stock for each returned item
   for (const item of retur.items) {
-    const product = await prisma.product.findUnique({ where: { id: item.productId } });
     await prisma.stock.upsert({
       where: {
         productId_departmentId: {
           productId: item.productId,
-          departmentId: product.departmentId,
+          departmentId: item.product.departmentId,
         },
       },
       update: { quantity: { decrement: item.quantity } },
       create: {
         productId: item.productId,
-        departmentId: product.departmentId,
+        departmentId: item.product.departmentId,
         quantity: 0,
       },
     });
@@ -457,28 +455,31 @@ app.put("/api/orders/:id/close", async (req, res) => {
   });
 
   // Decrease stock when order is closed
+  // Pre-fetch all recipes with their ingredients to avoid N+1 queries
+  const productIds = order.items.map((i) => i.productId);
+  const recipes = await prisma.recipe.findMany({
+    where: { productId: { in: productIds } },
+    include: { items: { include: { product: true } } },
+  });
+  const recipeMap = new Map(recipes.map((r) => [r.productId, r]));
+
   for (const item of order.items) {
-    // Check if product has a recipe
-    const recipe = await prisma.recipe.findFirst({
-      where: { productId: item.productId },
-      include: { items: true },
-    });
+    const recipe = recipeMap.get(item.productId);
 
     if (recipe) {
       // Decrease ingredient stock based on recipe
       for (const ri of recipe.items) {
-        const ingredient = await prisma.product.findUnique({ where: { id: ri.productId } });
         await prisma.stock.upsert({
           where: {
             productId_departmentId: {
               productId: ri.productId,
-              departmentId: ingredient.departmentId,
+              departmentId: ri.product.departmentId,
             },
           },
           update: { quantity: { decrement: ri.quantity * item.quantity } },
           create: {
             productId: ri.productId,
-            departmentId: ingredient.departmentId,
+            departmentId: ri.product.departmentId,
             quantity: 0,
           },
         });
