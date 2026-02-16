@@ -18,6 +18,7 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
   const [view, setView] = useState(initialView);
   const [payConfirm, setPayConfirm] = useState(null); // order being paid
   const [paySuccess, setPaySuccess] = useState(null); // successful payment info
+  const [waiterCalls, setWaiterCalls] = useState([]);
 
   useEffect(() => {
     setView(initialView);
@@ -27,7 +28,8 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
     fetch("/api/products").then((r) => r.json()).then(setProducts);
     fetch("/api/categories").then((r) => r.json()).then(setCategories);
     loadOrders();
-    const interval = setInterval(loadOrders, 5000);
+    loadWaiterCalls();
+    const interval = setInterval(() => { loadOrders(); loadWaiterCalls(); }, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -39,6 +41,16 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
       .then(([openOrders, deliveredOrders]) => {
         setOrders([...openOrders, ...deliveredOrders]);
       })
+      .catch(() => {});
+  };
+
+  const loadWaiterCalls = () => {
+    fetch("/api/call-waiter").then((r) => r.json()).then(setWaiterCalls).catch(() => {});
+  };
+
+  const acknowledgeCall = (callId) => {
+    fetch(`/api/call-waiter/${callId}/acknowledge`, { method: "PUT" })
+      .then(() => loadWaiterCalls())
       .catch(() => {});
   };
 
@@ -370,6 +382,27 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
             </div>
           )}
 
+          {/* Waiter call notifications */}
+          {waiterCalls.length > 0 && (
+            <div className="mb-4 space-y-2">
+              {waiterCalls.map((call) => (
+                <div key={call.id} className="bg-red-900/30 border-2 border-red-500 rounded-xl p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl animate-pulse">🔔</span>
+                    <div>
+                      <div className="font-bold text-red-400">Masa {call.tableNr} — Cheamă ospătarul!</div>
+                      <div className="text-xs text-gray-400">{call.type === "call" ? "Chemare ospătar" : call.type}</div>
+                    </div>
+                  </div>
+                  <button onClick={() => acknowledgeCall(call.id)}
+                    className="bg-green-700 hover:bg-green-600 px-4 py-2 rounded-lg font-bold text-sm">
+                    ✓ Confirmat
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {orders.length === 0 ? (
             <p className="text-gray-500">Nu sunt comenzi deschise.</p>
           ) : (
@@ -407,6 +440,13 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
                       </div>
                     )}
 
+                    {/* Order notes */}
+                    {order.notes && (
+                      <div className="mb-2 text-xs text-gray-400 italic bg-gray-700/50 rounded px-2 py-1">
+                        📝 {order.notes}
+                      </div>
+                    )}
+
                     {/* Status badge */}
                     <div className="mb-3">
                       {delivered ? (
@@ -431,6 +471,7 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
                               <span className="text-yellow-400">⏳</span>
                             )}
                             {item.quantity}× {item.product?.name}
+                            {item.personLabel && <span className="text-blue-400 text-xs ml-1">({item.personLabel})</span>}
                           </span>
                           <span className="text-gray-400">
                             {item.price * item.quantity} Lei

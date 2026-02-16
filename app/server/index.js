@@ -648,17 +648,19 @@ app.get("/api/orders", async (req, res) => {
 
 app.post("/api/orders", async (req, res) => {
   try {
-    const { tableNr, userId, items, source } = req.body;
+    const { tableNr, userId, items, source, notes } = req.body;
     const order = await prisma.order.create({
       data: {
         tableNr,
         userId,
         source: source || "pos",
+        notes: notes || "",
         items: {
           create: items.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
             price: item.price,
+            personLabel: item.personLabel || "",
           })),
         },
         total: items.reduce((sum, i) => sum + i.price * i.quantity, 0),
@@ -767,6 +769,7 @@ app.post("/api/orders/:id/items", async (req, res) => {
         productId: item.productId,
         quantity: item.quantity,
         price: item.price,
+        personLabel: item.personLabel || "",
       })),
     });
     const addedTotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
@@ -826,6 +829,49 @@ app.put("/api/orders/:orderId/items/:itemId/ready", async (req, res) => {
       include: { product: { include: { department: true } } },
     });
     res.json(item);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// --- Waiter Calls ---
+app.get("/api/call-waiter", async (_req, res) => {
+  try {
+    const calls = await prisma.waiterCall.findMany({
+      where: { status: "pending" },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(calls);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/call-waiter", async (req, res) => {
+  try {
+    const { tableNr, type } = req.body;
+    if (!tableNr) return res.status(400).json({ error: "tableNr is required" });
+    const call = await prisma.waiterCall.create({
+      data: { tableNr, type: type || "call" },
+    });
+    res.json(call);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.put("/api/call-waiter/:id/acknowledge", async (req, res) => {
+  try {
+    const id = safeId(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid ID" });
+    const call = await prisma.waiterCall.update({
+      where: { id },
+      data: { status: "acknowledged" },
+    });
+    res.json(call);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });

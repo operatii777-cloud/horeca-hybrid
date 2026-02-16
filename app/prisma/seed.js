@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Clear existing data in dependency order
+  await prisma.waiterCall.deleteMany();
   await prisma.consumptionVoucher.deleteMany();
   await prisma.wasteEntry.deleteMany();
   await prisma.attendance.deleteMany();

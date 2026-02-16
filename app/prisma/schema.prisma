@@ -168,6 +168,7 @@ model Order {
   total     Float       @default(0)
   payMethod String?     // "CASH", "CARD", "VOUCHER", "DISCOUNT", "PROTOCOL"
   source    String      @default("pos") // "pos", "qr", "supervisor"
+  notes     String      @default("")
   createdAt DateTime    @default(now())
   closedAt  DateTime?
   user      User        @relation(fields: [userId], references: [id])
@@ -175,14 +176,23 @@ model Order {
 }
 
 model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int
-  productId Int
-  quantity  Int     @default(1)
-  price     Float
-  ready     Boolean @default(false)
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  id          Int     @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  quantity    Int     @default(1)
+  price       Float
+  ready       Boolean @default(false)
+  personLabel String  @default("")
+  order       Order   @relation(fields: [orderId], references: [id])
+  product     Product @relation(fields: [productId], references: [id])
+}
+
+model WaiterCall {
+  id        Int      @id @default(autoincrement())
+  tableNr   Int
+  type      String   @default("call") // "call", "bill", "help"
+  status    String   @default("pending") // "pending", "acknowledged"
+  createdAt DateTime @default(now())
 }
 
 model Reservation {
