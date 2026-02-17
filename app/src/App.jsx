@@ -29,6 +29,9 @@ import MenuTVPage from "./pages/MenuTVPage.jsx";
 import CustomerDisplayPage from "./pages/CustomerDisplayPage.jsx";
 import ComandaQRPage from "./pages/ComandaQRPage.jsx";
 import ComandaSupervisorPage from "./pages/ComandaSupervisorPage.jsx";
+import RecipeVerificationPage from "./pages/RecipeVerificationPage.jsx";
+import AdvancedReportsPage from "./pages/AdvancedReportsPage.jsx";
+import UtilitiesPage from "./pages/UtilitiesPage.jsx";
 
 const MANAGEMENT_VIEWS = [
   "products", "recipes", "suppliers", "nir", "transfers",
@@ -107,6 +110,12 @@ export default function App() {
         return <CustomerDisplayPage />;
       case "comanda-supervisor":
         return <ComandaSupervisorPage user={user} />;
+      case "recipe-verification":
+        return <RecipeVerificationPage user={user} onLogout={handleLogout} />;
+      case "advanced-reports":
+        return <AdvancedReportsPage user={user} onLogout={handleLogout} />;
+      case "utilities":
+        return <UtilitiesPage user={user} onLogout={handleLogout} />;
       case "manual":
         return <ManualPage />;
       case "order-history":

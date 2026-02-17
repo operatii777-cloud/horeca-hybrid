@@ -1,0 +1,18 @@
+{
+  "departments": [
+    "BUCATARIE",
+    "BAR",
+    "BUFET",
+    "DIVERSE"
+  ],
+  "categories": [
+    "Bucatarie",
+    "Bar",
+    "Alcoolice",
+    "Materiale auxiliare",
+    "Gestiune papetarie",
+    "Stoc mort",
+    "Gestiune control",
+    "Gestiune comune"
+  ]
+}

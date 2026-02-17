@@ -36,6 +36,7 @@ const ADMIN_NAV = [
     children: [
       { id: "products", label: "Catalog Produse", icon: "🛒" },
       { id: "recipes", label: "Rețetar & Fișe", icon: "📖" },
+      { id: "recipe-verification", label: "Verificare Rețete", icon: "✓" },
       { id: "stock", label: "Stocuri", icon: "📊" },
       { id: "nir", label: "NIR", icon: "📥" },
       { id: "bon-consum", label: "Bon Consum", icon: "📄" },
@@ -55,13 +56,15 @@ const ADMIN_NAV = [
     icon: "⚙️",
     children: [
       { id: "reports", label: "Raport Vânzări", icon: "💹" },
+      { id: "advanced-reports", label: "Rapoarte Avansate", icon: "📊" },
       { id: "report-x", label: "Raport X", icon: "📈" },
       { id: "report-z", label: "Raport Z", icon: "📉" },
       { id: "shift-handover", label: "Jurnal Tură", icon: "📓" },
       { id: "orders", label: "Comenzi Deschise", icon: "📝" },
       { id: "order-history", label: "Istoric Comenzi", icon: "📜" },
       { id: "users", label: "Ospătari & Staff", icon: "👥" },
-      { id: "settings", label: "Setări", icon: "🔧" },
+      { id: "utilities", label: "Utilități & Configurare", icon: "🔧" },
+      { id: "settings", label: "Setări", icon: "⚙️" },
     ],
   },
   {
