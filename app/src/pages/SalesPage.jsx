@@ -8,6 +8,16 @@ const PAY_METHODS = [
   { id: "PROTOCOL", label: "Protocol", icon: "📋", color: "bg-gray-600 hover:bg-gray-500" },
 ];
 
+// Filter configuration for POS - only show sales products
+const SALES_DEPARTMENTS = ["BAR", "BUCATARIE", "BUFET"];
+const INVENTORY_CATEGORIES = [
+  "Materiale auxiliare",
+  "Gestiune papetarie",
+  "Gestiune control",
+  "Gestiune comune",
+  "Stoc mort"
+];
+
 export default function SalesPage({ user, onLogout, initialView = "pos", embedded = false }) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -30,23 +40,14 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
     // Fetch products and filter to only show sales products (Bar, Kitchen, Buffet)
     // Exclude inventory/management departments like DIVERSE
     fetch("/api/products").then((r) => r.json()).then((allProducts) => {
-      const salesDepartments = ["BAR", "BUCATARIE", "BUFET"];
-      const inventoryCategories = [
-        "Materiale auxiliare",
-        "Gestiune papetarie", 
-        "Gestiune control",
-        "Gestiune comune",
-        "Stoc mort"
-      ];
-      
       const salesProducts = allProducts.filter((product) => {
         // Filter by department: only show Bar, Kitchen, Buffet
         const isDepartmentAllowed = product.department && 
-          salesDepartments.includes(product.department.name);
+          SALES_DEPARTMENTS.includes(product.department.name);
         
         // Filter out inventory/management categories
         const isNotInventoryCategory = !product.category || 
-          !inventoryCategories.includes(product.category.name);
+          !INVENTORY_CATEGORIES.includes(product.category.name);
         
         return isDepartmentAllowed && isNotInventoryCategory;
       });
@@ -56,16 +57,8 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
     
     // Fetch categories and filter to only show sales-related categories
     fetch("/api/categories").then((r) => r.json()).then((allCategories) => {
-      const inventoryCategories = [
-        "Materiale auxiliare",
-        "Gestiune papetarie", 
-        "Gestiune control",
-        "Gestiune comune",
-        "Stoc mort"
-      ];
-      
       const salesCategories = allCategories.filter((category) => 
-        !inventoryCategories.includes(category.name)
+        !INVENTORY_CATEGORIES.includes(category.name)
       );
       
       setCategories(salesCategories);
