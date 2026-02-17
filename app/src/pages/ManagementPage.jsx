@@ -399,15 +399,33 @@ function NIRTab() {
           <input placeholder="Nr. NIR" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-32" />
         </div>
         <div className="space-y-2 mb-3">
-          {form.items.map((item, idx) => (
+          {form.items.map((item, idx) => {
+            // Group products by department for better organization
+            const productsByDept = products.reduce((acc, p) => {
+              const deptName = p.department?.name || 'Nedefinit';
+              if (!acc[deptName]) acc[deptName] = [];
+              acc[deptName].push(p);
+              return acc;
+            }, {});
+
+            return (
             <div key={idx} className="flex gap-2 items-end flex-wrap">
               <select 
                 value={item.productId} 
                 onChange={(e) => updateItem(idx, "productId", e.target.value)} 
                 className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm flex-1 min-w-[200px]"
+                title="Selectați un produs din listă (organizat pe departamente)"
               >
-                <option value="">Denumire produs</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                <option value="">📦 Selectați produs ({products.length} disponibile)</option>
+                {Object.entries(productsByDept).sort(([a], [b]) => a.localeCompare(b)).map(([dept, deptProducts]) => (
+                  <optgroup key={dept} label={`${dept} (${deptProducts.length})`}>
+                    {deptProducts.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} • {p.unit} • {p.price.toFixed(2)} Lei
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
               <input 
                 type="number" 
@@ -453,7 +471,8 @@ function NIRTab() {
                 </button>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={addItem} className="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-sm">+ Adaugă produs</button>
