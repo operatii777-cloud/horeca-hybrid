@@ -27,8 +27,50 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
   }, [initialView]);
 
   useEffect(() => {
-    fetch("/api/products").then((r) => r.json()).then(setProducts);
-    fetch("/api/categories").then((r) => r.json()).then(setCategories);
+    // Fetch products and filter to only show sales products (Bar, Kitchen, Buffet)
+    // Exclude inventory/management departments like DIVERSE
+    fetch("/api/products").then((r) => r.json()).then((allProducts) => {
+      const salesDepartments = ["BAR", "BUCATARIE", "BUFET"];
+      const inventoryCategories = [
+        "Materiale auxiliare",
+        "Gestiune papetarie", 
+        "Gestiune control",
+        "Gestiune comune",
+        "Stoc mort"
+      ];
+      
+      const salesProducts = allProducts.filter((product) => {
+        // Filter by department: only show Bar, Kitchen, Buffet
+        const isDepartmentAllowed = product.department && 
+          salesDepartments.includes(product.department.name);
+        
+        // Filter out inventory/management categories
+        const isNotInventoryCategory = !product.category || 
+          !inventoryCategories.includes(product.category.name);
+        
+        return isDepartmentAllowed && isNotInventoryCategory;
+      });
+      
+      setProducts(salesProducts);
+    });
+    
+    // Fetch categories and filter to only show sales-related categories
+    fetch("/api/categories").then((r) => r.json()).then((allCategories) => {
+      const inventoryCategories = [
+        "Materiale auxiliare",
+        "Gestiune papetarie", 
+        "Gestiune control",
+        "Gestiune comune",
+        "Stoc mort"
+      ];
+      
+      const salesCategories = allCategories.filter((category) => 
+        !inventoryCategories.includes(category.name)
+      );
+      
+      setCategories(salesCategories);
+    });
+    
     fetch("/api/reservations").then((r) => r.json()).then(setReservations).catch(() => {});
     loadOrders();
     loadWaiterCalls();
