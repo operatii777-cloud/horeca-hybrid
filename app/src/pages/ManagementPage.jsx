@@ -285,9 +285,9 @@ function RawMaterialsTab() {
     const field = event.colDef.field;
     let value = event.newValue;
     
-    // Convert numeric fields
+    // Convert numeric fields - preserve zero values
     if (field === "price" || field === "stockMin" || field === "vatRate") {
-      value = value ? Number(value) : null;
+      value = (value !== "" && value !== null && value !== undefined) ? Number(value) : null;
     }
     
     await fetch(`/api/raw-materials/${id}`, {
