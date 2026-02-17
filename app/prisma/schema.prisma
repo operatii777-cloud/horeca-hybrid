@@ -24,6 +24,7 @@ model Department {
   stockItems     Stock[]
   transfersFrom  Transfer[]     @relation("TransferFrom")
   transfersTo    Transfer[]     @relation("TransferTo")
+  nirItems       NIRItem[]
 }
 
 model Category {
@@ -42,6 +43,7 @@ model Supplier {
 model Product {
   id           Int           @id @default(autoincrement())
   name         String
+  code         String        @default("")
   price        Float
   unit         String        @default("buc")
   departmentId Int
@@ -97,15 +99,17 @@ model NIR {
 }
 
 model NIRItem {
-  id        Int   @id @default(autoincrement())
-  nirId     Int
-  productId Int
-  quantity  Float
-  price     Float
-  vatRate   Float @default(0)
-  markup    Float @default(0)
-  nir       NIR     @relation(fields: [nirId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  id           Int        @id @default(autoincrement())
+  nirId        Int
+  productId    Int
+  departmentId Int
+  quantity     Float
+  price        Float
+  vatRate      Float      @default(0)
+  markup       Float      @default(0)
+  nir          NIR        @relation(fields: [nirId], references: [id])
+  product      Product    @relation(fields: [productId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
 }
 
 model Transfer {

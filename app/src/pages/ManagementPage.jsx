@@ -327,7 +327,22 @@ function NIRTab() {
   const [nirs, setNirs] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "", vatRate: "0", markup: "0" }] });
+  const [departments, setDepartments] = useState([]);
+  const [form, setForm] = useState({ 
+    supplierId: "", 
+    number: "", 
+    items: [{ 
+      productId: "", 
+      productName: "",
+      productCode: "",
+      departmentId: "",
+      unit: "kg",
+      quantity: "", 
+      price: "", 
+      vatRate: "0",
+      isNew: false
+    }] 
+  });
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printNir, setPrintNir] = useState(null);
 
@@ -336,6 +351,7 @@ function NIRTab() {
     load();
     fetch("/api/suppliers").then((r) => r.json()).then(setSuppliers);
     fetch("/api/products").then((r) => r.json()).then(setProducts);
+    fetch("/api/departments").then((r) => r.json()).then(setDepartments);
   }, []);
 
   // Handle Escape key to close modal
@@ -349,33 +365,133 @@ function NIRTab() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [showPrintModal]);
 
-  const addItem = () => setForm({ ...form, items: [...form.items, { productId: "", quantity: "", price: "", vatRate: "0", markup: "0" }] });
+  const addItem = () => setForm({ 
+    ...form, 
+    items: [...form.items, { 
+      productId: "", 
+      productName: "",
+      productCode: "",
+      departmentId: "",
+      unit: "kg",
+      quantity: "", 
+      price: "", 
+      vatRate: "0",
+      isNew: false
+    }] 
+  });
+  
   const removeItem = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) });
+  
   const updateItem = (idx, field, value) => {
     const items = [...form.items];
     items[idx] = { ...items[idx], [field]: value };
+    
+    // If selecting existing product, auto-fill details
+    if (field === "productId" && value && value !== "new") {
+      const product = products.find(p => p.id === Number(value));
+      if (product) {
+        items[idx].productName = product.name;
+        items[idx].productCode = product.code || "";
+        items[idx].unit = product.unit;
+        items[idx].isNew = false;
+      }
+    }
+    
+    // If selecting "new", enable manual entry
+    if (field === "productId" && value === "new") {
+      items[idx].isNew = true;
+      items[idx].productId = "";
+      items[idx].productName = "";
+      items[idx].productCode = "";
+    }
+    
     setForm({ ...form, items });
   };
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.supplierId || !form.number || form.items.some((i) => !i.productId || !i.quantity || !i.price)) return;
+    
+    // Validate required fields
+    if (!form.supplierId || !form.number) {
+      alert("Vă rugăm completați furnizorul și numărul NIR");
+      return;
+    }
+    
+    if (form.items.some((i) => !i.departmentId || !i.quantity || !i.price)) {
+      alert("Vă rugăm completați toate câmpurile obligatorii (gestiune, cantitate, preț)");
+      return;
+    }
+    
+    // Create new products first if needed
+    const processedItems = [];
+    for (const item of form.items) {
+      let productId = item.productId;
+      
+      // Create new product if it's a new entry
+      if (item.isNew && item.productName) {
+        try {
+          const newProduct = await fetch("/api/products", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: item.productName,
+              code: item.productCode || "",
+              price: Number(item.price),
+              unit: item.unit,
+              departmentId: Number(item.departmentId),
+              categoryId: 1 // Default category for raw materials
+            })
+          });
+          const createdProduct = await newProduct.json();
+          productId = createdProduct.id;
+        } catch (err) {
+          console.error("Error creating product:", err);
+          alert(`Eroare la crearea materiei prime: ${item.productName}`);
+          return;
+        }
+      }
+      
+      processedItems.push({
+        productId: Number(productId),
+        departmentId: Number(item.departmentId),
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        vatRate: Number(item.vatRate),
+        markup: 0 // Markup will be added later in extended view
+      });
+    }
+    
+    // Create NIR
     await fetch("/api/nir", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         supplierId: Number(form.supplierId),
         number: form.number,
-        items: form.items.map((i) => ({ 
-          productId: Number(i.productId), 
-          quantity: Number(i.quantity), 
-          price: Number(i.price),
-          vatRate: Number(i.vatRate),
-          markup: Number(i.markup)
-        })),
+        items: processedItems
       }),
     });
-    setForm({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "", vatRate: "0", markup: "0" }] });
+    
+    // Reset form
+    setForm({ 
+      supplierId: "", 
+      number: "", 
+      items: [{ 
+        productId: "", 
+        productName: "",
+        productCode: "",
+        departmentId: "",
+        unit: "kg",
+        quantity: "", 
+        price: "", 
+        vatRate: "0",
+        isNew: false
+      }] 
+    });
+    
+    // Reload data
     load();
+    fetch("/api/products").then((r) => r.json()).then(setProducts);
   };
 
   const handlePrint = (nir) => {
@@ -398,81 +514,176 @@ function NIRTab() {
           </select>
           <input placeholder="Nr. NIR" value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-32" />
         </div>
-        <div className="space-y-2 mb-3">
-          {form.items.map((item, idx) => {
-            // Group products by department for better organization
-            const productsByDept = products.reduce((acc, p) => {
-              const deptName = p.department?.name || 'Nedefinit';
-              if (!acc[deptName]) acc[deptName] = [];
-              acc[deptName].push(p);
-              return acc;
-            }, {});
+        <div className="space-y-3 mb-3">
+          {form.items.map((item, idx) => (
+            <div key={idx} className="bg-gray-700/50 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-amber-400 font-medium">Linia #{idx + 1}</span>
+                {form.items.length > 1 && (
+                  <button 
+                    type="button" 
+                    onClick={() => removeItem(idx)} 
+                    className="text-red-400 hover:text-red-300 px-2 py-1 text-sm"
+                  >
+                    ✕ Șterge
+                  </button>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {/* Department/Warehouse Selection */}
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Gestiune *</label>
+                  <select 
+                    value={item.departmentId} 
+                    onChange={(e) => updateItem(idx, "departmentId", e.target.value)}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                    required
+                  >
+                    <option value="">Selectați gestiunea</option>
+                    {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
 
-            return (
-            <div key={idx} className="flex gap-2 items-end flex-wrap">
-              <select 
-                value={item.productId} 
-                onChange={(e) => updateItem(idx, "productId", e.target.value)} 
-                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm flex-1 min-w-[200px]"
-                title="Selectați un produs din listă (organizat pe departamente)"
-              >
-                <option value="">📦 Selectați produs ({products.length} disponibile)</option>
-                {Object.entries(productsByDept).sort(([a], [b]) => a.localeCompare(b)).map(([dept, deptProducts]) => (
-                  <optgroup key={dept} label={`${dept} (${deptProducts.length})`}>
-                    {deptProducts.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} • {p.unit} • {p.price.toFixed(2)} Lei
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <input 
-                type="number" 
-                step="0.01" 
-                placeholder="Cantitate" 
-                value={item.quantity} 
-                onChange={(e) => updateItem(idx, "quantity", e.target.value)} 
-                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-24" 
-              />
-              <input 
-                type="number" 
-                step="0.01" 
-                placeholder="Preț unitar" 
-                value={item.price} 
-                onChange={(e) => updateItem(idx, "price", e.target.value)} 
-                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-28" 
-              />
-              <select 
-                value={item.vatRate} 
-                onChange={(e) => updateItem(idx, "vatRate", e.target.value)} 
-                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-24"
-              >
-                <option value="0">TVA 0%</option>
-                <option value="5">TVA 5%</option>
-                <option value="11">TVA 11%</option>
-                <option value="21">TVA 21%</option>
-              </select>
-              <input 
-                type="number" 
-                step="0.01" 
-                placeholder="Adaos %" 
-                value={item.markup} 
-                onChange={(e) => updateItem(idx, "markup", e.target.value)} 
-                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-24" 
-              />
-              {form.items.length > 1 && (
-                <button 
-                  type="button" 
-                  onClick={() => removeItem(idx)} 
-                  className="text-red-400 hover:text-red-300 px-2 py-2 text-sm"
-                >
-                  ✕
-                </button>
-              )}
+                {/* Product Selection or New Entry */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs text-gray-400 mb-1">Materie Primă *</label>
+                  <select 
+                    value={item.isNew ? "new" : item.productId} 
+                    onChange={(e) => updateItem(idx, "productId", e.target.value)}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                    required
+                  >
+                    <option value="">Selectați materie primă ({products.length} disponibile)</option>
+                    <option value="new" className="font-bold bg-green-900">➕ Adaugă materie primă nouă</option>
+                    {products.map((p) => {
+                      const stock = p.stockItems?.reduce((sum, s) => sum + s.quantity, 0) || 0;
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {p.name} | {p.code ? `COD: ${p.code} | ` : ''}{p.unit} | Stoc: {stock} | {p.price.toFixed(2)} Lei
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Show manual entry fields if "new" is selected */}
+                {item.isNew && (
+                  <>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Denumire *</label>
+                      <input 
+                        type="text"
+                        placeholder="Numele materiei prime"
+                        value={item.productName}
+                        onChange={(e) => updateItem(idx, "productName", e.target.value)}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">COD M.P</label>
+                      <input 
+                        type="text"
+                        placeholder="Cod materie primă"
+                        value={item.productCode}
+                        onChange={(e) => updateItem(idx, "productCode", e.target.value)}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">UM *</label>
+                      <select
+                        value={item.unit}
+                        onChange={(e) => updateItem(idx, "unit", e.target.value)}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                        required
+                      >
+                        <option value="kg">kg</option>
+                        <option value="buc">buc</option>
+                        <option value="l">l</option>
+                        <option value="ml">ml</option>
+                        <option value="g">g</option>
+                        <option value="pahar">pahar</option>
+                        <option value="cutie">cutie</option>
+                        <option value="pachet">pachet</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                
+                {/* Show COD M.P for existing products */}
+                {!item.isNew && item.productId && (
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">COD M.P</label>
+                    <input 
+                      type="text"
+                      value={item.productCode}
+                      readOnly
+                      className="w-full bg-gray-600 border border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-400"
+                    />
+                  </div>
+                )}
+
+                {/* Quantity */}
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Cantitate intrare *</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="Cantitate" 
+                    value={item.quantity} 
+                    onChange={(e) => updateItem(idx, "quantity", e.target.value)}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                    required
+                  />
+                </div>
+
+                {/* Unit Price */}
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Preț unitar (Lei) *</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="Preț unitar" 
+                    value={item.price} 
+                    onChange={(e) => updateItem(idx, "price", e.target.value)}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                    required
+                  />
+                </div>
+
+                {/* VAT Rate */}
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">TVA % *</label>
+                  <select 
+                    value={item.vatRate} 
+                    onChange={(e) => updateItem(idx, "vatRate", e.target.value)}
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+                    required
+                  >
+                    <option value="0">TVA 0%</option>
+                    <option value="5">TVA 5%</option>
+                    <option value="11">TVA 11%</option>
+                    <option value="21">TVA 21%</option>
+                  </select>
+                </div>
+                
+                {/* Calculated Value */}
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Valoare (Lei)</label>
+                  <input 
+                    type="text"
+                    value={item.quantity && item.price ? (Number(item.quantity) * Number(item.price)).toFixed(2) : "0.00"}
+                    readOnly
+                    className="w-full bg-gray-600 border border-gray-600 rounded-lg px-3 py-2 text-sm text-amber-400 font-medium"
+                  />
+                </div>
+              </div>
             </div>
-            );
-          })}
+          ))}
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={addItem} className="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-sm">+ Adaugă produs</button>

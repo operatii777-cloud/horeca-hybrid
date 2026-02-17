@@ -234,9 +234,9 @@ app.get("/api/products", async (req, res) => {
 
 app.post("/api/products", async (req, res) => {
   try {
-    const { name, price, unit, departmentId, categoryId } = req.body;
+    const { name, code, price, unit, departmentId, categoryId } = req.body;
     const product = await prisma.product.create({
-      data: { name, price, unit, departmentId, categoryId },
+      data: { name, code: code || "", price, unit, departmentId, categoryId },
       include: { department: true, category: true, stockItems: true },
     });
     // Create initial stock entry (0 quantity)
@@ -376,6 +376,7 @@ app.post("/api/nir", async (req, res) => {
         items: {
           create: items.map((i) => ({
             productId: i.productId,
+            departmentId: i.departmentId,
             quantity: i.quantity,
             price: i.price,
             vatRate: i.vatRate || 0,
@@ -383,22 +384,30 @@ app.post("/api/nir", async (req, res) => {
           })),
         },
       },
-      include: { supplier: true, items: { include: { product: true } } },
+      include: { 
+        supplier: true, 
+        items: { 
+          include: { 
+            product: true,
+            department: true
+          } 
+        } 
+      },
     });
 
-    // Increase stock for each NIR item
+    // Increase stock for each NIR item in the selected department
     for (const item of nir.items) {
       await prisma.stock.upsert({
         where: {
           productId_departmentId: {
             productId: item.productId,
-            departmentId: item.product.departmentId,
+            departmentId: item.departmentId,
           },
         },
         update: { quantity: { increment: item.quantity } },
         create: {
           productId: item.productId,
-          departmentId: item.product.departmentId,
+          departmentId: item.departmentId,
           quantity: item.quantity,
         },
       });
