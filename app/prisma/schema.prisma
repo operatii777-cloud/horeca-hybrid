@@ -33,10 +33,11 @@ model Category {
 }
 
 model Supplier {
-  id    Int     @id @default(autoincrement())
-  name  String
-  nirs  NIR[]
-  returs Retur[]
+  id           Int           @id @default(autoincrement())
+  name         String
+  nirs         NIR[]
+  returs       Retur[]
+  rawMaterials RawMaterial[]
 }
 
 model Product {
@@ -58,6 +59,23 @@ model Product {
   inventoryItems   InventoryItem[]
   wasteEntries     WasteEntry[]
   consumptionVouchers ConsumptionVoucher[]
+}
+
+model RawMaterial {
+  id            Int       @id @default(autoincrement())
+  code          String?
+  name          String
+  unit          String
+  price         Float
+  groupCategory String?
+  supplierId    Int?
+  stockMin      Float?
+  expiryDays    Int?
+  vatRate       Float     @default(19)
+  processStock  Int       @default(1)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  supplier      Supplier? @relation(fields: [supplierId], references: [id])
 }
 
 model Stock {

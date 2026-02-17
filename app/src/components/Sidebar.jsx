@@ -35,6 +35,7 @@ const ADMIN_NAV = [
     icon: "📦",
     children: [
       { id: "products", label: "Catalog Produse", icon: "🛒" },
+      { id: "rawMaterials", label: "Materii Prime", icon: "📦" },
       { id: "recipes", label: "Rețetar & Fișe", icon: "📖" },
       { id: "recipe-verification", label: "Verificare Rețete", icon: "✓" },
       { id: "stock", label: "Stocuri", icon: "📊" },
