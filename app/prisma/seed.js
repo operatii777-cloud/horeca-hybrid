@@ -109,13 +109,13 @@ async function main() {
   // Create products from DBF data
   console.log("Creating products...");
   let products = [];
+  let productCodeMap = {}; // Map DBF product codes to created product IDs
   
   if (extractedData && extractedData.products.length > 0) {
     // Map department IDs (DBF uses 1-based, adjust to our departments)
     const depMap = { 0: 0, 1: 1, 2: 0, 3: 2, 4: 3 }; // Map DBF deps to our deps
     const grupMap = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4 }; // Map groups to categories
     
-    let count = 0;
     for (const prod of extractedData.products) {
       // Skip invalid products
       if (!prod.DEN_PROD || prod.DEN_PROD.length === 0) continue;
@@ -129,21 +129,18 @@ async function main() {
           data: {
             name: prod.DEN_PROD.trim(),
             price: prod.PRET1 || 0,
-            unit: "buc",
+            unit: prod.UM || "buc",
             departmentId: departments[depId].id,
             categoryId: categories[catId].id,
           },
         });
         products.push(product);
-        count++;
-        
-        // Limit to first 100 products for performance
-        if (count >= 100) break;
+        productCodeMap[prod.COD_PROD] = product.id;
       } catch (err) {
         console.error(`Error creating product ${prod.DEN_PROD}:`, err.message);
       }
     }
-    console.log(`✓ Created ${products.length} products from DBF data\n`);
+    console.log(`✓ Created ${products.length} finished products from DBF data\n`);
   } else {
     // Fallback: create demo products
     const productData = [
@@ -182,12 +179,13 @@ async function main() {
   // Create raw materials/ingredients
   console.log("Creating raw materials...");
   let rawMaterialsCreated = 0;
+  let rawMaterialCodeMap = {}; // Map DBF material codes to created product IDs
   
   if (extractedData && extractedData.rawMaterials.length > 0) {
     // Create raw materials as products with material category
     const materialCategoryId = categories[categories.length - 1].id; // Last category
     
-    for (const mat of extractedData.rawMaterials.slice(0, 50)) {
+    for (const mat of extractedData.rawMaterials) {
       if (!mat.DENUMIRE || mat.DENUMIRE.length === 0) continue;
       
       try {
@@ -201,12 +199,13 @@ async function main() {
           },
         });
         products.push(product);
+        rawMaterialCodeMap[mat.COD] = product.id;
         rawMaterialsCreated++;
       } catch (err) {
         console.error(`Error creating raw material ${mat.DENUMIRE}:`, err.message);
       }
     }
-    console.log(`✓ Created ${rawMaterialsCreated} raw materials\n`);
+    console.log(`✓ Created ${rawMaterialsCreated} raw materials from DBF data\n`);
   } else {
     // Create demo raw materials
     const rawMaterialData = [
@@ -241,50 +240,42 @@ async function main() {
   // Create sample recipes
   console.log("Creating recipes...");
   let recipesCreated = 0;
+  let recipesSkipped = 0;
+  let recipesSkippedNoProduct = 0;
+  let recipesSkippedNoIngredients = 0;
   
   if (extractedData && extractedData.recipes.length > 0) {
-    // Group recipes by product code
-    const recipesByProduct = {};
-    for (const rec of extractedData.recipes) {
-      if (rec.COD_RET && rec.COD_MAT && rec.CANT > 0) {
-        if (!recipesByProduct[rec.COD_RET]) {
-          recipesByProduct[rec.COD_RET] = [];
-        }
-        recipesByProduct[rec.COD_RET].push(rec);
+    // Process all recipes from DBF
+    for (const recipe of extractedData.recipes) {
+      const prodCode = recipe.product_code;
+      const items = recipe.items;
+      
+      // Find the main product by its DBF code
+      const mainProductId = productCodeMap[prodCode];
+      if (!mainProductId) {
+        recipesSkippedNoProduct++;
+        continue; // Skip if product not found
       }
-    }
-    
-    // Create recipes (limit to first 20 for demo)
-    const recipeKeys = Object.keys(recipesByProduct).slice(0, 20);
-    for (const prodCode of recipeKeys) {
-      const items = recipesByProduct[prodCode];
       
-      // Find matching product
-      const mainProduct = products.find(p => p.name.includes(items[0].DENUMIRE));
-      if (!mainProduct) continue;
-      
-      // Create recipe items
+      // Create recipe items by matching ingredient codes
       const recipeItems = [];
       for (const item of items) {
-        // Try to match ingredient by code or name
-        const ingredient = products.find(p => 
-          p.name.includes(item.DENUMIRE) || 
-          p.id === item.COD_MAT
-        );
+        const ingredientId = rawMaterialCodeMap[item.COD_MAT];
         
-        if (ingredient && item.CANT > 0) {
+        if (ingredientId && item.CANT > 0) {
           recipeItems.push({
-            productId: ingredient.id,
+            productId: ingredientId,
             quantity: item.CANT,
           });
         }
       }
       
+      // Create recipe if it has at least one valid ingredient
       if (recipeItems.length > 0) {
         try {
           await prisma.recipe.create({
             data: {
-              productId: mainProduct.id,
+              productId: mainProductId,
               items: {
                 create: recipeItems,
               },
@@ -292,11 +283,24 @@ async function main() {
           });
           recipesCreated++;
         } catch (err) {
-          // Skip duplicate recipes
+          // Skip duplicate recipes or errors
+          recipesSkipped++;
         }
+      } else {
+        recipesSkippedNoIngredients++;
       }
     }
-    console.log(`✓ Created ${recipesCreated} recipes from DBF data\n`);
+    console.log(`✓ Created ${recipesCreated} recipes from DBF data`);
+    if (recipesSkippedNoProduct > 0) {
+      console.log(`  ℹ Skipped ${recipesSkippedNoProduct} recipes (product not found)`);
+    }
+    if (recipesSkippedNoIngredients > 0) {
+      console.log(`  ℹ Skipped ${recipesSkippedNoIngredients} recipes (no valid ingredients)`);
+    }
+    if (recipesSkipped > 0) {
+      console.log(`  ℹ Skipped ${recipesSkipped} recipes (errors/duplicates)`);
+    }
+    console.log();
   }
   
   // Always create a few demo recipes
@@ -383,10 +387,11 @@ async function main() {
   
   if (extractedData) {
     console.log("\n📊 Original DBF Data Statistics:");
-    console.log(`   - Products in Windows app: ${extractedData.products.length}`);
-    console.log(`   - Raw materials: ${extractedData.rawMaterials.length}`);
-    console.log(`   - Recipe items: ${extractedData.recipes.length}`);
-    console.log(`   - Migrated to unified app: ${products.length} products, ${recipesCreated} recipes`);
+    console.log(`   - Finished products in DBF: ${extractedData.products.length}`);
+    console.log(`   - Raw materials in DBF: ${extractedData.rawMaterials.length}`);
+    console.log(`   - Recipes in DBF: ${extractedData.recipes.length}`);
+    console.log(`   - Total recipe items: ${extractedData.recipes.reduce((sum, r) => sum + r.items.length, 0)}`);
+    console.log(`   - Migrated: ${products.length} total products (${extractedData.products.length} finished + ${rawMaterialsCreated} materials), ${recipesCreated} recipes`);
   }
   console.log("\n");
 }
