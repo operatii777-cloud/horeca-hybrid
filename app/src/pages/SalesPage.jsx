@@ -19,6 +19,8 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
   const [payConfirm, setPayConfirm] = useState(null); // order being paid
   const [paySuccess, setPaySuccess] = useState(null); // successful payment info
   const [waiterCalls, setWaiterCalls] = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const [selectedTableDetails, setSelectedTableDetails] = useState(null);
 
   useEffect(() => {
     setView(initialView);
@@ -27,6 +29,7 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
   useEffect(() => {
     fetch("/api/products").then((r) => r.json()).then(setProducts);
     fetch("/api/categories").then((r) => r.json()).then(setCategories);
+    fetch("/api/reservations").then((r) => r.json()).then(setReservations).catch(() => {});
     loadOrders();
     loadWaiterCalls();
     const interval = setInterval(() => { loadOrders(); loadWaiterCalls(); }, 5000);
@@ -86,6 +89,49 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
   };
 
   const cartTotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+  // Helper functions for table status
+  const getTableOrder = (tableNum) => {
+    return orders.find((o) => o.tableNr === tableNum);
+  };
+
+  const isTableReserved = (tableNum) => {
+    const today = new Date().toISOString().slice(0, 10);
+    return reservations.some((r) => r.date === today && r.tableNr === tableNum);
+  };
+
+  const getTableColor = (tableNum) => {
+    const order = getTableOrder(tableNum);
+    if (order) {
+      return "bg-red-600 border-red-400"; // Occupied with order
+    }
+    if (isTableReserved(tableNum)) {
+      return "bg-blue-600 border-blue-400"; // Reserved
+    }
+    return "bg-green-600 border-green-400"; // Free
+  };
+
+  const handleTableClick = (tableNum) => {
+    const order = getTableOrder(tableNum);
+    if (order) {
+      // Show order details for occupied table
+      setSelectedTableDetails(order);
+    } else {
+      // Just set table number for new order
+      setTableNr(tableNum);
+    }
+  };
+
+  const addItemsToExistingOrder = async (orderId, newItems) => {
+    await fetch(`/api/orders/${orderId}/items`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: newItems }),
+    });
+    setCart([]);
+    setSelectedTableDetails(null);
+    loadOrders();
+  };
 
   const sendOrder = async () => {
     if (cart.length === 0) return;
@@ -162,6 +208,97 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
           </button>
         </div>
       </header>
+      )}
+
+      {/* Table order details modal */}
+      {selectedTableDetails && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-700 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">🍽️ Comandă Masă {selectedTableDetails.tableNr}</h2>
+              <button onClick={() => setSelectedTableDetails(null)} className="text-gray-400 hover:text-white text-2xl">✕</button>
+            </div>
+
+            {/* Existing order summary */}
+            <div className="bg-gray-900 rounded-lg p-4 mb-4">
+              <div className="flex justify-between text-sm text-gray-400 mb-2">
+                <span>Comanda #{selectedTableDetails.id}</span>
+                <span>{selectedTableDetails.source === "qr" ? "📱 QR" : selectedTableDetails.source === "supervisor" ? "📋 Ospătar" : "🛒 POS"}</span>
+              </div>
+              <div className="space-y-1 border-t border-gray-700 pt-2">
+                {(selectedTableDetails.items || []).map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span className="flex items-center gap-1">
+                      {item.ready ? <span className="text-green-400">✓</span> : <span className="text-yellow-400">⏳</span>}
+                      {item.quantity}× {item.product?.name}
+                    </span>
+                    <span>{(item.price * item.quantity).toFixed(2)} lei</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-gray-700 mt-2 pt-2 flex justify-between text-xl font-bold">
+                <span>TOTAL COMANDĂ:</span>
+                <span className="text-green-400">{(selectedTableDetails.total || 0).toFixed(2)} Lei</span>
+              </div>
+            </div>
+
+            {/* Add more items section */}
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold mb-2">➕ Adaugă produse la comandă</h3>
+              {cart.length > 0 && (
+                <div className="bg-gray-700 rounded-lg p-3 mb-3">
+                  <div className="space-y-1 mb-2">
+                    {cart.map((item) => (
+                      <div key={item.productId} className="flex justify-between text-sm">
+                        <span>{item.quantity}× {item.name}</span>
+                        <span>{(item.price * item.quantity).toFixed(2)} lei</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between font-bold text-blue-400">
+                    <span>Subtotal adăugat:</span>
+                    <span>{cartTotal.toFixed(2)} Lei</span>
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => addItemsToExistingOrder(selectedTableDetails.id, cart)}
+                disabled={cart.length === 0}
+                className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed font-bold transition-colors mb-2"
+              >
+                {cart.length > 0 ? `Adaugă ${cart.length} produse la comandă` : "Selectați produse din meniu"}
+              </button>
+              <button
+                onClick={() => setSelectedTableDetails(null)}
+                className="w-full py-2 rounded-lg bg-gray-600 hover:bg-gray-500 font-bold transition-colors"
+              >
+                Înapoi la meniu
+              </button>
+            </div>
+
+            {/* Payment section */}
+            {selectedTableDetails.status === "delivered" && (
+              <div className="border-t border-gray-700 pt-4">
+                <h3 className="text-lg font-semibold mb-3">💰 Încasare</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {PAY_METHODS.map((pm) => (
+                    <button
+                      key={pm.id}
+                      onClick={() => {
+                        closeOrder(selectedTableDetails.id, pm.id);
+                        setSelectedTableDetails(null);
+                      }}
+                      className={`px-4 py-3 rounded-xl text-sm font-bold ${pm.color} flex items-center justify-center gap-2`}
+                    >
+                      <span className="text-lg">{pm.icon}</span>
+                      <span>{pm.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Payment success overlay */}
@@ -278,19 +415,24 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
           {/* Cart sidebar */}
           <div className="w-80 bg-gray-800 flex flex-col">
             <div className="p-4 border-b border-gray-700">
-              <label className="text-sm text-gray-400">Masa Nr.</label>
+              <label className="text-sm text-gray-400 mb-2 block">Masa Nr. (Roșu=Ocupată, Albastru=Rezervată, Verde=Liberă)</label>
               <div className="flex gap-2 mt-1 flex-wrap">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setTableNr(n)}
-                    className={`w-9 h-9 rounded-lg text-sm font-bold transition-colors ${
-                      tableNr === n ? "bg-blue-600" : "bg-gray-700 hover:bg-gray-600"
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
+                  const colorClass = getTableColor(n);
+                  const hasOrder = !!getTableOrder(n);
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => handleTableClick(n)}
+                      className={`w-9 h-9 rounded-lg text-sm font-bold transition-colors border-2 ${colorClass} ${
+                        tableNr === n && !hasOrder ? "ring-2 ring-white" : ""
+                      }`}
+                      title={hasOrder ? `Masa ${n} ocupată - click pentru detalii` : `Masa ${n}`}
+                    >
+                      {n}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

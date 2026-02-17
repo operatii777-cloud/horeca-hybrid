@@ -1,10 +1,19 @@
 import { useState, useEffect } from "react";
 
+const PAY_METHODS = [
+  { id: "CASH", label: "Cash", icon: "💵", color: "bg-green-700 hover:bg-green-600" },
+  { id: "CARD", label: "Card", icon: "💳", color: "bg-blue-700 hover:bg-blue-600" },
+  { id: "VOUCHER", label: "Voucher", icon: "🎫", color: "bg-purple-700 hover:bg-purple-600" },
+  { id: "DISCOUNT", label: "Discount", icon: "🏷️", color: "bg-yellow-700 hover:bg-yellow-600" },
+  { id: "PROTOCOL", label: "Protocol", icon: "📋", color: "bg-gray-600 hover:bg-gray-500" },
+];
+
 export default function TablePlanPage() {
   const [orders, setOrders] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
   const [clock, setClock] = useState(new Date());
+  const [paySuccess, setPaySuccess] = useState(null);
 
   useEffect(() => {
     const load = () => {
@@ -28,6 +37,28 @@ export default function TablePlanPage() {
     return () => clearInterval(timer);
   }, []);
 
+  const closeOrder = async (orderId, payMethod) => {
+    const order = orders.find((o) => o.id === orderId);
+    const res = await fetch(`/api/orders/${orderId}/close`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payMethod }),
+    });
+    const closed = await res.json();
+    setSelectedTable(null);
+    setPaySuccess({ orderId, payMethod, total: closed.total || order?.total || 0, tableNr: closed.tableNr || order?.tableNr });
+    setTimeout(() => setPaySuccess(null), 4000);
+    // Reload orders
+    Promise.all([
+      fetch("/api/orders?status=open").then((r) => r.json()),
+      fetch("/api/orders?status=delivered").then((r) => r.json()),
+    ])
+      .then(([openOrders, deliveredOrders]) => {
+        setOrders([...openOrders, ...deliveredOrders]);
+      })
+      .catch(() => {});
+  };
+
   const tables = Array.from({ length: 10 }, (_, i) => i + 1);
 
   const occupiedMap = {};
@@ -46,6 +77,22 @@ export default function TablePlanPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
+      {/* Payment success overlay */}
+      {paySuccess && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-2xl p-8 border-2 border-green-500 text-center max-w-sm">
+            <div className="text-6xl mb-4">✅</div>
+            <div className="text-2xl font-bold text-green-400 mb-2">Plată confirmată!</div>
+            <div className="text-gray-300 mb-1">Comanda #{paySuccess.orderId} • Masa {paySuccess.tableNr}</div>
+            <div className="text-3xl font-bold text-white mb-2">{paySuccess.total} Lei</div>
+            <div className="text-sm text-gray-400">
+              Metoda: {PAY_METHODS.find((p) => p.id === paySuccess.payMethod)?.icon}{" "}
+              {PAY_METHODS.find((p) => p.id === paySuccess.payMethod)?.label}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">🗺️ Plan Mese</h1>
         <div className="flex gap-4 text-sm">
@@ -133,17 +180,39 @@ export default function TablePlanPage() {
                     <li key={item.id} className="flex justify-between text-sm">
                       <span className="flex items-center gap-1">
                         {item.ready ? <span className="text-green-400">✓</span> : <span className="text-yellow-400">⏳</span>}
-                        {item.product?.name}
+                        {item.quantity}× {item.product?.name}
                       </span>
                       <span>
-                        x{item.quantity} — {(item.price * item.quantity).toFixed(2)} lei
+                        {(item.price * item.quantity).toFixed(2)} lei
                       </span>
                     </li>
                   ))}
                 </ul>
-                <div className="text-right font-bold text-lg text-green-400">
-                  Total: {(selectedOrder.total || 0).toFixed(2)} lei
+                <div className="border-t border-gray-700 pt-3 mb-4">
+                  <div className="flex justify-between font-bold text-lg text-green-400">
+                    <span>Total:</span>
+                    <span>{(selectedOrder.total || 0).toFixed(2)} lei</span>
+                  </div>
                 </div>
+                
+                {/* Payment section for delivered orders */}
+                {selectedOrder.status === "delivered" && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2 text-gray-300">💰 Încasare</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {PAY_METHODS.map((pm) => (
+                        <button
+                          key={pm.id}
+                          onClick={() => closeOrder(selectedOrder.id, pm.id)}
+                          className={`px-3 py-2 rounded-lg text-xs font-bold ${pm.color} flex items-center justify-center gap-1`}
+                        >
+                          <span>{pm.icon}</span>
+                          <span>{pm.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : reservedTables.has(selectedTable) ? (
               <div>
