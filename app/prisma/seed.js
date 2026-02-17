@@ -158,8 +158,8 @@ async function main() {
       number: "NIR-001",
       items: {
         create: [
-          { productId: products[24].id, quantity: 20, price: 3 },
-          { productId: products[25].id, quantity: 10, price: 25 },
+          { productId: products[24].id, departmentId: departments[1].id, quantity: 20, price: 3 },
+          { productId: products[25].id, departmentId: departments[1].id, quantity: 10, price: 25 },
         ],
       },
     },
