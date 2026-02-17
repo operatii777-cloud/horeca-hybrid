@@ -368,11 +368,32 @@ app.get("/api/nir", async (_req, res) => {
 
 app.post("/api/nir", async (req, res) => {
   try {
-    const { supplierId, number, items } = req.body;
+    const { supplierId, date, invoiceNumber, items, paidBase, paidVat } = req.body;
+    
+    // Calculate NIR number automatically (total NIRs + 1)
+    const count = await prisma.nIR.count();
+    const number = `NIR-${String(count + 1).padStart(4, '0')}`;
+    
+    // Calculate validation amounts
+    let validationBase = 0;
+    let validationVat = 0;
+    
+    for (const item of items) {
+      const itemValue = item.quantity * item.price;
+      validationBase += itemValue;
+      validationVat += itemValue * (item.vatRate / 100);
+    }
+    
     const nir = await prisma.nIR.create({
       data: {
         supplierId,
         number,
+        date: date ? new Date(date) : new Date(),
+        invoiceNumber: invoiceNumber || "",
+        validationBase,
+        validationVat,
+        paidBase: paidBase || 0,
+        paidVat: paidVat || 0,
         items: {
           create: items.map((i) => ({
             productId: i.productId,
@@ -414,6 +435,40 @@ app.post("/api/nir", async (req, res) => {
     }
 
     res.json(nir);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.delete("/api/nir/:id", async (req, res) => {
+  try {
+    const id = safeId(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid ID" });
+    
+    // Get NIR with items before deleting to reverse stock changes
+    const nir = await prisma.nIR.findUnique({
+      where: { id },
+      include: { items: true }
+    });
+    
+    if (!nir) return res.status(404).json({ error: "NIR not found" });
+    
+    // Decrease stock for each NIR item
+    for (const item of nir.items) {
+      await prisma.stock.updateMany({
+        where: {
+          productId: item.productId,
+          departmentId: item.departmentId,
+        },
+        data: { quantity: { decrement: item.quantity } }
+      });
+    }
+    
+    // Delete NIR (cascade will delete items)
+    await prisma.nIR.delete({ where: { id } });
+    
+    res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });

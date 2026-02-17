@@ -90,12 +90,17 @@ model RecipeItem {
 }
 
 model NIR {
-  id         Int       @id @default(autoincrement())
-  supplierId Int
-  date       DateTime  @default(now())
-  number     String
-  supplier   Supplier  @relation(fields: [supplierId], references: [id])
-  items      NIRItem[]
+  id              Int       @id @default(autoincrement())
+  supplierId      Int
+  date            DateTime  @default(now())
+  number          String
+  invoiceNumber   String    @default("")
+  validationBase  Float     @default(0)
+  validationVat   Float     @default(0)
+  paidBase        Float     @default(0)
+  paidVat         Float     @default(0)
+  supplier        Supplier  @relation(fields: [supplierId], references: [id])
+  items           NIRItem[]
 }
 
 model NIRItem {
