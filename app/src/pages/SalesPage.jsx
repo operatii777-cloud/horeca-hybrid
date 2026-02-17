@@ -415,11 +415,19 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
           {/* Cart sidebar */}
           <div className="w-80 bg-gray-800 flex flex-col">
             <div className="p-4 border-b border-gray-700">
-              <label className="text-sm text-gray-400 mb-2 block">Masa Nr. (Roșu=Ocupată, Albastru=Rezervată, Verde=Liberă)</label>
+              <label className="text-sm text-gray-400 mb-2 block">
+                Masa Nr. 
+                <span className="ml-2 text-xs">(Roșu=Ocupată, Albastru=Rezervată, Verde=Liberă)</span>
+              </label>
               <div className="flex gap-2 mt-1 flex-wrap">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
                   const colorClass = getTableColor(n);
                   const hasOrder = !!getTableOrder(n);
+                  const isReserved = isTableReserved(n);
+                  let statusText = "liberă";
+                  if (hasOrder) statusText = "ocupată";
+                  else if (isReserved) statusText = "rezervată";
+                  
                   return (
                     <button
                       key={n}
@@ -427,6 +435,7 @@ export default function SalesPage({ user, onLogout, initialView = "pos", embedde
                       className={`w-9 h-9 rounded-lg text-sm font-bold transition-colors border-2 ${colorClass} ${
                         tableNr === n && !hasOrder ? "ring-2 ring-white" : ""
                       }`}
+                      aria-label={`Masa ${n} - ${statusText}`}
                       title={hasOrder ? `Masa ${n} ocupată - click pentru detalii` : `Masa ${n}`}
                     >
                       {n}

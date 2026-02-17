@@ -227,6 +227,7 @@ export default function Sidebar({ user, activeView, onNavigate, onLogout }) {
         <button
           onClick={toggleSidebar}
           className="w-full flex items-center justify-center px-2 py-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+          aria-label={isCollapsed ? "Extinde meniul" : "Restrânge meniul"}
           title={isCollapsed ? "Extinde meniul" : "Restrânge meniul"}
         >
           {isCollapsed ? "→" : "←"}
