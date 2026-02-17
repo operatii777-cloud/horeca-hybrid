@@ -208,6 +208,101 @@ app.delete("/api/suppliers/:id", async (req, res) => {
   }
 });
 
+// --- Raw Materials ---
+app.get("/api/raw-materials", async (_req, res) => {
+  try {
+    const rawMaterials = await prisma.rawMaterial.findMany({
+      include: { supplier: true },
+      orderBy: { name: "asc" },
+    });
+    res.json(rawMaterials);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get("/api/raw-materials/:id", async (req, res) => {
+  try {
+    const id = safeId(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid ID" });
+    const rawMaterial = await prisma.rawMaterial.findUnique({
+      where: { id },
+      include: { supplier: true },
+    });
+    if (!rawMaterial) return res.status(404).json({ error: "Raw material not found" });
+    res.json(rawMaterial);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/raw-materials", async (req, res) => {
+  try {
+    const { code, name, unit, price, groupCategory, supplierId, stockMin, expiryDays, vatRate, processStock } = req.body;
+    if (!name || !unit || price === undefined) {
+      return res.status(400).json({ error: "Name, unit, and price are required" });
+    }
+    const data = {
+      code: code || `RM${Date.now()}`,
+      name,
+      unit,
+      price: Number(price),
+      groupCategory,
+      supplierId: supplierId ? Number(supplierId) : null,
+      stockMin: stockMin ? Number(stockMin) : null,
+      expiryDays: expiryDays ? Number(expiryDays) : null,
+      vatRate: vatRate !== undefined ? Number(vatRate) : 19,
+      processStock: processStock !== undefined ? Number(processStock) : 1,
+    };
+    const rawMaterial = await prisma.rawMaterial.create({
+      data,
+      include: { supplier: true },
+    });
+    res.json(rawMaterial);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.put("/api/raw-materials/:id", async (req, res) => {
+  try {
+    const id = safeId(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid ID" });
+    const updateData = { ...req.body };
+    // Convert numeric fields
+    if (updateData.price !== undefined) updateData.price = Number(updateData.price);
+    if (updateData.supplierId !== undefined) updateData.supplierId = updateData.supplierId ? Number(updateData.supplierId) : null;
+    if (updateData.stockMin !== undefined) updateData.stockMin = updateData.stockMin ? Number(updateData.stockMin) : null;
+    if (updateData.expiryDays !== undefined) updateData.expiryDays = updateData.expiryDays ? Number(updateData.expiryDays) : null;
+    if (updateData.vatRate !== undefined) updateData.vatRate = Number(updateData.vatRate);
+    if (updateData.processStock !== undefined) updateData.processStock = Number(updateData.processStock);
+    const rawMaterial = await prisma.rawMaterial.update({
+      where: { id },
+      data: updateData,
+      include: { supplier: true },
+    });
+    res.json(rawMaterial);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.delete("/api/raw-materials/:id", async (req, res) => {
+  try {
+    const id = safeId(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid ID" });
+    await prisma.rawMaterial.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // --- Products ---
 app.get("/api/products", async (req, res) => {
   try {

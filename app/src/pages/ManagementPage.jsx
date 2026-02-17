@@ -8,6 +8,7 @@ const agDarkTheme = themeQuartz.withPart(colorSchemeDark);
 
 const tabs = [
   { id: "products", label: "Produse" },
+  { id: "rawMaterials", label: "Materii Prime" },
   { id: "recipes", label: "Rețete" },
   { id: "suppliers", label: "Furnizori" },
   { id: "nir", label: "NIR" },
@@ -67,6 +68,7 @@ export default function ManagementPage({ user, onLogout, initialTab = "products"
 
       <div className="p-4">
         {activeTab === "products" && <ProductsTab />}
+        {activeTab === "rawMaterials" && <RawMaterialsTab />}
         {activeTab === "recipes" && <RecipesTab />}
         {activeTab === "suppliers" && <SuppliersTab />}
         {activeTab === "nir" && <NIRTab />}
@@ -179,6 +181,266 @@ function ProductsTab() {
       </form>
       <div style={{ height: "calc(100vh - 220px)" }}>
         <AgGridReact theme={agDarkTheme} rowData={rowData} columnDefs={columnDefs} onCellValueChanged={onCellValueChanged} defaultColDef={{ sortable: true, filter: true, resizable: true }} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Raw Materials Tab ---------- */
+function RawMaterialsTab() {
+  const [rowData, setRowData] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [form, setForm] = useState({
+    code: "",
+    name: "",
+    unit: "buc",
+    price: "",
+    groupCategory: "",
+    supplierId: "",
+    stockMin: "",
+    vatRate: "19",
+    processStock: true,
+  });
+
+  const load = () => fetch("/api/raw-materials").then((r) => r.json()).then(setRowData);
+
+  useEffect(() => {
+    load();
+    fetch("/api/suppliers").then((r) => r.json()).then(setSuppliers);
+  }, []);
+
+  const unitOptions = ["buc", "kg", "Litru", "st", "L", "ml", "g"];
+  const groupOptions = [
+    "Bar",
+    "Bucătărie",
+    "Alcoolice",
+    "Materiale auxiliare",
+    "Gestiune papetarie",
+    "Stoc mort",
+    "Gestiune control",
+    "Gestiune comune",
+    "DEP 0",
+  ];
+
+  const columnDefs = useMemo(() => [
+    { field: "id", width: 70 },
+    { field: "code", headerName: "Cod", width: 100, editable: true },
+    { field: "name", headerName: "Denumire", flex: 1, editable: true, sortable: true, filter: true },
+    {
+      field: "unit",
+      headerName: "U.M.",
+      width: 80,
+      editable: true,
+      cellEditor: "agSelectCellEditor",
+      cellEditorParams: { values: unitOptions },
+    },
+    {
+      field: "price",
+      headerName: "Preț",
+      width: 100,
+      editable: true,
+      valueFormatter: (params) => params.value ? params.value.toFixed(2) : "0.00",
+    },
+    {
+      field: "groupCategory",
+      headerName: "Grupă",
+      width: 150,
+      editable: true,
+      cellEditor: "agSelectCellEditor",
+      cellEditorParams: { values: groupOptions },
+    },
+    {
+      field: "supplier.name",
+      headerName: "Furnizor",
+      width: 150,
+      valueGetter: (params) => params.data.supplier?.name || "",
+    },
+    {
+      field: "stockMin",
+      headerName: "Stoc minim",
+      width: 100,
+      editable: true,
+    },
+    {
+      headerName: "Acțiuni",
+      width: 100,
+      cellRenderer: (params) => (
+        <button
+          className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded"
+          onClick={async () => {
+            if (confirm(`Ștergeți materia primă "${params.data.name}"?`)) {
+              await fetch(`/api/raw-materials/${params.data.id}`, { method: "DELETE" });
+              load();
+            }
+          }}
+        >
+          Șterge
+        </button>
+      ),
+    },
+  ], []);
+
+  const onCellValueChanged = useCallback(async (event) => {
+    const { id } = event.data;
+    const field = event.colDef.field;
+    let value = event.newValue;
+    
+    // Convert numeric fields
+    if (field === "price" || field === "stockMin" || field === "vatRate") {
+      value = value ? Number(value) : null;
+    }
+    
+    await fetch(`/api/raw-materials/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    });
+    load();
+  }, []);
+
+  const addRawMaterial = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.price || !form.unit) {
+      alert("Denumire, preț și U.M. sunt obligatorii!");
+      return;
+    }
+    
+    await fetch("/api/raw-materials", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: form.code || undefined,
+        name: form.name,
+        unit: form.unit,
+        price: Number(form.price),
+        groupCategory: form.groupCategory || undefined,
+        supplierId: form.supplierId ? Number(form.supplierId) : undefined,
+        stockMin: form.stockMin ? Number(form.stockMin) : undefined,
+        vatRate: Number(form.vatRate),
+        processStock: form.processStock ? 1 : 0,
+      }),
+    });
+    
+    setForm({
+      code: "",
+      name: "",
+      unit: "buc",
+      price: "",
+      groupCategory: "",
+      supplierId: "",
+      stockMin: "",
+      vatRate: "19",
+      processStock: true,
+    });
+    load();
+  };
+
+  return (
+    <div>
+      <form onSubmit={addRawMaterial} className="mb-4 bg-gray-800 rounded-xl p-4">
+        <h3 className="text-lg font-bold mb-3 text-amber-400">Adaugă materie primă nouă</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+          <input
+            placeholder="Cod (opțional)"
+            value={form.code}
+            onChange={(e) => setForm({ ...form, code: e.target.value })}
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+          />
+          <input
+            placeholder="Denumire *"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+            required
+          />
+          <select
+            value={form.unit}
+            onChange={(e) => setForm({ ...form, unit: e.target.value })}
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+          >
+            {unitOptions.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
+          <input
+            placeholder="Preț *"
+            type="number"
+            step="0.01"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+            required
+          />
+          <select
+            value={form.groupCategory}
+            onChange={(e) => setForm({ ...form, groupCategory: e.target.value })}
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="">Grupă (opțional)</option>
+            {groupOptions.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+          <select
+            value={form.supplierId}
+            onChange={(e) => setForm({ ...form, supplierId: e.target.value })}
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="">Furnizor (opțional)</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <input
+            placeholder="Stoc minim"
+            type="number"
+            step="0.01"
+            value={form.stockMin}
+            onChange={(e) => setForm({ ...form, stockMin: e.target.value })}
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+          />
+          <input
+            placeholder="Cotă TVA (%)"
+            type="number"
+            step="0.01"
+            value={form.vatRate}
+            onChange={(e) => setForm({ ...form, vatRate: e.target.value })}
+            className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+        <div className="flex gap-3 items-center">
+          <label className="flex items-center gap-2 text-sm text-gray-300">
+            <input
+              type="checkbox"
+              checked={form.processStock}
+              onChange={(e) => setForm({ ...form, processStock: e.target.checked })}
+              className="rounded"
+            />
+            Procesare stoc
+          </label>
+          <button
+            type="submit"
+            className="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            Adaugă
+          </button>
+        </div>
+      </form>
+      
+      <div style={{ height: "calc(100vh - 400px)" }} className="ag-theme-quartz-dark">
+        <AgGridReact
+          theme={agDarkTheme}
+          rowData={rowData}
+          columnDefs={columnDefs}
+          onCellValueChanged={onCellValueChanged}
+          defaultColDef={{ sortable: true, filter: true, resizable: true }}
+        />
       </div>
     </div>
   );
@@ -326,14 +588,14 @@ function SuppliersTab() {
 function NIRTab() {
   const [nirs, setNirs] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [rawMaterials, setRawMaterials] = useState([]);
   const [form, setForm] = useState({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "" }] });
 
   const load = () => fetch("/api/nir").then((r) => r.json()).then(setNirs);
   useEffect(() => {
     load();
     fetch("/api/suppliers").then((r) => r.json()).then(setSuppliers);
-    fetch("/api/products").then((r) => r.json()).then(setProducts);
+    fetch("/api/raw-materials").then((r) => r.json()).then(setRawMaterials);
   }, []);
 
   const addItem = () => setForm({ ...form, items: [...form.items, { productId: "", quantity: "", price: "" }] });
@@ -374,8 +636,8 @@ function NIRTab() {
           {form.items.map((item, idx) => (
             <div key={idx} className="flex gap-2 items-end">
               <select value={item.productId} onChange={(e) => updateItem(idx, "productId", e.target.value)} className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm flex-1">
-                <option value="">Produs</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                <option value="">Materie primă</option>
+                {rawMaterials.map((rm) => <option key={rm.id} value={rm.id}>{rm.name} ({rm.unit})</option>)}
               </select>
               <input type="number" step="0.01" placeholder="Cant." value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-24" />
               <input type="number" step="0.01" placeholder="Preț" value={item.price} onChange={(e) => updateItem(idx, "price", e.target.value)} className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-24" />
@@ -384,7 +646,7 @@ function NIRTab() {
           ))}
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={addItem} className="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-sm">+ Produs</button>
+          <button type="button" onClick={addItem} className="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-sm">+ Materie primă</button>
           <button type="submit" className="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg text-sm font-medium">Salvează NIR</button>
         </div>
       </form>
