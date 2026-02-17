@@ -900,10 +900,10 @@ function NIRTab() {
                         <td className="py-2 px-1 text-right">{item.vatRate}%</td>
                         <td className="py-2 px-1 text-right">{tvaTot.toFixed(2)}</td>
                         <td className="py-2 px-1 text-right">{item.markup}%</td>
-                        <td className="py-2 px-1 text-right">{adaosValoare.toFixed(2)}</td>
-                        <td className="py-2 px-1 text-right">{tvaAdaos.toFixed(2)}</td>
-                        <td className="py-2 px-1 text-right">{pretVanzare.toFixed(2)}</td>
-                        <td className="py-2 px-1 text-right font-medium">{valoareVanzare.toFixed(2)}</td>
+                        <td className="py-2 px-1 text-right text-blue-400 font-medium">{adaosValoare.toFixed(2)}</td>
+                        <td className="py-2 px-1 text-right text-blue-400 font-medium">{tvaAdaos.toFixed(2)}</td>
+                        <td className="py-2 px-1 text-right text-green-400 font-medium">{pretVanzare.toFixed(2)}</td>
+                        <td className="py-2 px-1 text-right text-green-400 font-bold">{valoareVanzare.toFixed(2)}</td>
                       </tr>
                     );
                   })}
