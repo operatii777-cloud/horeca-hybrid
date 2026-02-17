@@ -327,7 +327,9 @@ function NIRTab() {
   const [nirs, setNirs] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "" }] });
+  const [form, setForm] = useState({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "", vatRate: "0" }] });
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printNir, setPrintNir] = useState(null);
 
   const load = () => fetch("/api/nir").then((r) => r.json()).then(setNirs);
   useEffect(() => {
@@ -336,7 +338,7 @@ function NIRTab() {
     fetch("/api/products").then((r) => r.json()).then(setProducts);
   }, []);
 
-  const addItem = () => setForm({ ...form, items: [...form.items, { productId: "", quantity: "", price: "" }] });
+  const addItem = () => setForm({ ...form, items: [...form.items, { productId: "", quantity: "", price: "", vatRate: "0" }] });
   const removeItem = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) });
   const updateItem = (idx, field, value) => {
     const items = [...form.items];
@@ -352,11 +354,25 @@ function NIRTab() {
       body: JSON.stringify({
         supplierId: Number(form.supplierId),
         number: form.number,
-        items: form.items.map((i) => ({ productId: Number(i.productId), quantity: Number(i.quantity), price: Number(i.price) })),
+        items: form.items.map((i) => ({ 
+          productId: Number(i.productId), 
+          quantity: Number(i.quantity), 
+          price: Number(i.price),
+          vatRate: Number(i.vatRate)
+        })),
       }),
     });
-    setForm({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "" }] });
+    setForm({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "", vatRate: "0" }] });
     load();
+  };
+
+  const handlePrint = (nir) => {
+    setPrintNir(nir);
+    setShowPrintModal(true);
+  };
+
+  const printDocument = () => {
+    window.print();
   };
 
   return (
@@ -372,45 +388,205 @@ function NIRTab() {
         </div>
         <div className="space-y-2 mb-3">
           {form.items.map((item, idx) => (
-            <div key={idx} className="flex gap-2 items-end">
-              <select value={item.productId} onChange={(e) => updateItem(idx, "productId", e.target.value)} className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm flex-1">
-                <option value="">Produs</option>
+            <div key={idx} className="flex gap-2 items-end flex-wrap">
+              <select 
+                value={item.productId} 
+                onChange={(e) => updateItem(idx, "productId", e.target.value)} 
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm flex-1 min-w-[200px]"
+              >
+                <option value="">Denumire produs</option>
                 {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <input type="number" step="0.01" placeholder="Cant." value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)} className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-24" />
-              <input type="number" step="0.01" placeholder="Preț" value={item.price} onChange={(e) => updateItem(idx, "price", e.target.value)} className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-24" />
-              {form.items.length > 1 && <button type="button" onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-300 px-2 py-2 text-sm">✕</button>}
+              <input 
+                type="number" 
+                step="0.01" 
+                placeholder="Cantitate" 
+                value={item.quantity} 
+                onChange={(e) => updateItem(idx, "quantity", e.target.value)} 
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-24" 
+              />
+              <input 
+                type="number" 
+                step="0.01" 
+                placeholder="Preț unitar" 
+                value={item.price} 
+                onChange={(e) => updateItem(idx, "price", e.target.value)} 
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-28" 
+              />
+              <select 
+                value={item.vatRate} 
+                onChange={(e) => updateItem(idx, "vatRate", e.target.value)} 
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-24"
+              >
+                <option value="0">TVA 0%</option>
+                <option value="5">TVA 5%</option>
+                <option value="11">TVA 11%</option>
+                <option value="21">TVA 21%</option>
+              </select>
+              {form.items.length > 1 && (
+                <button 
+                  type="button" 
+                  onClick={() => removeItem(idx)} 
+                  className="text-red-400 hover:text-red-300 px-2 py-2 text-sm"
+                >
+                  ✕
+                </button>
+              )}
             </div>
           ))}
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={addItem} className="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-sm">+ Produs</button>
-          <button type="submit" className="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg text-sm font-medium">Salvează NIR</button>
+          <button type="button" onClick={addItem} className="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-sm">+ Adaugă produs</button>
+          <button type="submit" className="bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg text-sm font-medium">Generează NIR</button>
         </div>
       </form>
 
       <div className="space-y-4">
         {nirs.map((nir) => (
           <div key={nir.id} className="bg-gray-800 rounded-xl p-4">
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex justify-between items-center mb-3">
               <div>
                 <span className="font-bold text-amber-400">NIR #{nir.number}</span>
                 <span className="text-gray-400 text-sm ml-3">{nir.supplier.name}</span>
                 <span className="text-gray-500 text-xs ml-3">{new Date(nir.date).toLocaleString("ro-RO")}</span>
               </div>
+              <button 
+                onClick={() => handlePrint(nir)}
+                className="bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1"
+              >
+                🖨️ Printează
+              </button>
             </div>
-            <div className="space-y-1">
-              {nir.items.map((item) => (
-                <div key={item.id} className="flex justify-between text-sm text-gray-300">
-                  <span>{item.product.name}</span>
-                  <span>{item.quantity} × {item.price} Lei</span>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-gray-700">
+                  <tr className="text-left text-gray-400">
+                    <th className="py-2">Produs</th>
+                    <th className="py-2 text-right">Cantitate</th>
+                    <th className="py-2 text-right">Preț unitar</th>
+                    <th className="py-2 text-right">TVA %</th>
+                    <th className="py-2 text-right">Valoare</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nir.items.map((item) => {
+                    const total = item.quantity * item.price;
+                    return (
+                      <tr key={item.id} className="text-gray-300 border-b border-gray-700/50">
+                        <td className="py-2">{item.product.name}</td>
+                        <td className="py-2 text-right">{item.quantity}</td>
+                        <td className="py-2 text-right">{item.price.toFixed(2)} Lei</td>
+                        <td className="py-2 text-right">{item.vatRate}%</td>
+                        <td className="py-2 text-right font-medium">{total.toFixed(2)} Lei</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="border-t-2 border-gray-600">
+                  <tr className="text-amber-400 font-bold">
+                    <td className="py-2" colSpan="4">Total NIR</td>
+                    <td className="py-2 text-right">
+                      {nir.items.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)} Lei
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
         ))}
-        {nirs.length === 0 && <p className="text-gray-500">Nu există NIR-uri.</p>}
+        {nirs.length === 0 && <p className="text-gray-500">Nu există NIR-uri înregistrate.</p>}
       </div>
+
+      {/* Print Modal */}
+      {showPrintModal && printNir && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowPrintModal(false)}>
+          <div className="bg-white text-black rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto print:max-h-none print:overflow-visible" onClick={(e) => e.stopPropagation()}>
+            <div className="p-8 print:p-12">
+              {/* Header */}
+              <div className="text-center mb-8 border-b-2 border-black pb-4">
+                <h1 className="text-2xl font-bold mb-2">NOTĂ DE INTRARE-RECEPȚIE</h1>
+                <p className="text-lg">Nr. {printNir.number}</p>
+                <p className="text-sm text-gray-600">Data: {new Date(printNir.date).toLocaleDateString("ro-RO")}</p>
+              </div>
+
+              {/* Supplier Info */}
+              <div className="mb-6">
+                <p className="font-bold mb-1">Furnizor:</p>
+                <p className="ml-4">{printNir.supplier.name}</p>
+              </div>
+
+              {/* Items Table */}
+              <table className="w-full mb-8 border-collapse border border-black">
+                <thead>
+                  <tr className="bg-gray-200">
+                    <th className="border border-black p-2 text-left">Nr. crt.</th>
+                    <th className="border border-black p-2 text-left">Denumire produs</th>
+                    <th className="border border-black p-2 text-right">Cantitate</th>
+                    <th className="border border-black p-2 text-right">Preț unitar (Lei)</th>
+                    <th className="border border-black p-2 text-right">Cotă TVA (%)</th>
+                    <th className="border border-black p-2 text-right">Valoare (Lei)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {printNir.items.map((item, idx) => {
+                    const total = item.quantity * item.price;
+                    return (
+                      <tr key={item.id}>
+                        <td className="border border-black p-2 text-center">{idx + 1}</td>
+                        <td className="border border-black p-2">{item.product.name}</td>
+                        <td className="border border-black p-2 text-right">{item.quantity}</td>
+                        <td className="border border-black p-2 text-right">{item.price.toFixed(2)}</td>
+                        <td className="border border-black p-2 text-right">{item.vatRate}%</td>
+                        <td className="border border-black p-2 text-right font-medium">{total.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="font-bold bg-gray-100">
+                    <td className="border border-black p-2 text-right" colSpan="5">TOTAL GENERAL:</td>
+                    <td className="border border-black p-2 text-right">
+                      {printNir.items.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)} Lei
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              {/* Signatures */}
+              <div className="grid grid-cols-2 gap-8 mt-12">
+                <div>
+                  <p className="font-bold mb-8">Întocmit:</p>
+                  <div className="border-t border-black pt-2">
+                    <p className="text-sm text-gray-600">Semnătură și ștampilă</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="font-bold mb-8">Primit:</p>
+                  <div className="border-t border-black pt-2">
+                    <p className="text-sm text-gray-600">Semnătură și ștampilă</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-8 print:hidden">
+                <button 
+                  onClick={printDocument}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium"
+                >
+                  🖨️ Printează
+                </button>
+                <button 
+                  onClick={() => setShowPrintModal(false)}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium"
+                >
+                  Închide
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

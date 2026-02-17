@@ -378,6 +378,7 @@ app.post("/api/nir", async (req, res) => {
             productId: i.productId,
             quantity: i.quantity,
             price: i.price,
+            vatRate: i.vatRate || 0,
           })),
         },
       },

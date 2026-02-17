@@ -102,6 +102,7 @@ model NIRItem {
   productId Int
   quantity  Float
   price     Float
+  vatRate   Float @default(0)
   nir       NIR     @relation(fields: [nirId], references: [id])
   product   Product @relation(fields: [productId], references: [id])
 }
