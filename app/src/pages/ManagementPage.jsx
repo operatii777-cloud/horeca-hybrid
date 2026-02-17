@@ -327,7 +327,7 @@ function NIRTab() {
   const [nirs, setNirs] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "", vatRate: "0" }] });
+  const [form, setForm] = useState({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "", vatRate: "0", markup: "0" }] });
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printNir, setPrintNir] = useState(null);
 
@@ -349,7 +349,7 @@ function NIRTab() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [showPrintModal]);
 
-  const addItem = () => setForm({ ...form, items: [...form.items, { productId: "", quantity: "", price: "", vatRate: "0" }] });
+  const addItem = () => setForm({ ...form, items: [...form.items, { productId: "", quantity: "", price: "", vatRate: "0", markup: "0" }] });
   const removeItem = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) });
   const updateItem = (idx, field, value) => {
     const items = [...form.items];
@@ -369,11 +369,12 @@ function NIRTab() {
           productId: Number(i.productId), 
           quantity: Number(i.quantity), 
           price: Number(i.price),
-          vatRate: Number(i.vatRate)
+          vatRate: Number(i.vatRate),
+          markup: Number(i.markup)
         })),
       }),
     });
-    setForm({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "", vatRate: "0" }] });
+    setForm({ supplierId: "", number: "", items: [{ productId: "", quantity: "", price: "", vatRate: "0", markup: "0" }] });
     load();
   };
 
@@ -434,6 +435,14 @@ function NIRTab() {
                 <option value="11">TVA 11%</option>
                 <option value="21">TVA 21%</option>
               </select>
+              <input 
+                type="number" 
+                step="0.01" 
+                placeholder="Adaos %" 
+                value={item.markup} 
+                onChange={(e) => updateItem(idx, "markup", e.target.value)} 
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm w-24" 
+              />
               {form.items.length > 1 && (
                 <button 
                   type="button" 
@@ -469,35 +478,59 @@ function NIRTab() {
               </button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs">
                 <thead className="border-b border-gray-700">
                   <tr className="text-left text-gray-400">
-                    <th className="py-2">Produs</th>
-                    <th className="py-2 text-right">Cantitate</th>
-                    <th className="py-2 text-right">Preț unitar</th>
-                    <th className="py-2 text-right">TVA %</th>
-                    <th className="py-2 text-right">Valoare</th>
+                    <th className="py-2 px-1">Produs</th>
+                    <th className="py-2 px-1 text-center">UM</th>
+                    <th className="py-2 px-1 text-right">Cant.</th>
+                    <th className="py-2 px-1 text-right">Preț U.</th>
+                    <th className="py-2 px-1 text-right">Valoare</th>
+                    <th className="py-2 px-1 text-right">TVA %</th>
+                    <th className="py-2 px-1 text-right">TVA Tot</th>
+                    <th className="py-2 px-1 text-right">Adaos %</th>
+                    <th className="py-2 px-1 text-right">Adaos V.</th>
+                    <th className="py-2 px-1 text-right">TVA Ad.</th>
+                    <th className="py-2 px-1 text-right">Preț V.</th>
+                    <th className="py-2 px-1 text-right">Val. V.</th>
                   </tr>
                 </thead>
                 <tbody>
                   {nir.items.map((item) => {
-                    const total = item.quantity * item.price;
+                    // Base calculations
+                    const valoare = item.quantity * item.price;
+                    const tvaTot = valoare * (item.vatRate / 100);
+                    const adaosValoare = valoare * (item.markup / 100);
+                    const tvaAdaos = adaosValoare * (item.vatRate / 100);
+                    const pretVanzare = item.price * (1 + item.markup / 100);
+                    const valoareVanzare = item.quantity * pretVanzare;
+                    
                     return (
                       <tr key={item.id} className="text-gray-300 border-b border-gray-700/50">
-                        <td className="py-2">{item.product.name}</td>
-                        <td className="py-2 text-right">{item.quantity}</td>
-                        <td className="py-2 text-right">{item.price.toFixed(2)} Lei</td>
-                        <td className="py-2 text-right">{item.vatRate}%</td>
-                        <td className="py-2 text-right font-medium">{total.toFixed(2)} Lei</td>
+                        <td className="py-2 px-1">{item.product.name}</td>
+                        <td className="py-2 px-1 text-center">{item.product.unit}</td>
+                        <td className="py-2 px-1 text-right">{item.quantity}</td>
+                        <td className="py-2 px-1 text-right">{item.price.toFixed(2)}</td>
+                        <td className="py-2 px-1 text-right">{valoare.toFixed(2)}</td>
+                        <td className="py-2 px-1 text-right">{item.vatRate}%</td>
+                        <td className="py-2 px-1 text-right">{tvaTot.toFixed(2)}</td>
+                        <td className="py-2 px-1 text-right">{item.markup}%</td>
+                        <td className="py-2 px-1 text-right">{adaosValoare.toFixed(2)}</td>
+                        <td className="py-2 px-1 text-right">{tvaAdaos.toFixed(2)}</td>
+                        <td className="py-2 px-1 text-right">{pretVanzare.toFixed(2)}</td>
+                        <td className="py-2 px-1 text-right font-medium">{valoareVanzare.toFixed(2)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot className="border-t-2 border-gray-600">
                   <tr className="text-amber-400 font-bold">
-                    <td className="py-2" colSpan="4">Total NIR</td>
-                    <td className="py-2 text-right">
-                      {nir.items.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)} Lei
+                    <td className="py-2 px-1" colSpan="11">Total NIR</td>
+                    <td className="py-2 px-1 text-right">
+                      {nir.items.reduce((sum, item) => {
+                        const pretVanzare = item.price * (1 + item.markup / 100);
+                        return sum + (item.quantity * pretVanzare);
+                      }, 0).toFixed(2)} Lei
                     </td>
                   </tr>
                 </tfoot>
@@ -517,8 +550,8 @@ function NIRTab() {
           aria-modal="true"
           aria-labelledby="print-modal-title"
         >
-          <div className="bg-white text-black rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto print:max-h-none print:overflow-visible" onClick={(e) => e.stopPropagation()}>
-            <div className="p-8 print:p-12">
+          <div className="bg-white text-black rounded-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto print:max-h-none print:overflow-visible" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 print:p-8">
               {/* Header */}
               <div className="text-center mb-8 border-b-2 border-black pb-4">
                 <h1 id="print-modal-title" className="text-2xl font-bold mb-2">NOTĂ DE INTRARE-RECEPȚIE</h1>
@@ -533,37 +566,61 @@ function NIRTab() {
               </div>
 
               {/* Items Table */}
-              <table className="w-full mb-8 border-collapse border border-black">
+              <table className="w-full mb-8 border-collapse border border-black text-xs">
                 <thead>
                   <tr className="bg-gray-200">
-                    <th className="border border-black p-2 text-left">Nr. crt.</th>
-                    <th className="border border-black p-2 text-left">Denumire produs</th>
-                    <th className="border border-black p-2 text-right">Cantitate</th>
-                    <th className="border border-black p-2 text-right">Preț unitar (Lei)</th>
-                    <th className="border border-black p-2 text-right">Cotă TVA (%)</th>
-                    <th className="border border-black p-2 text-right">Valoare (Lei)</th>
+                    <th className="border border-black p-1 text-center">Nr.</th>
+                    <th className="border border-black p-1 text-left">Denumire</th>
+                    <th className="border border-black p-1 text-center">UM</th>
+                    <th className="border border-black p-1 text-right">Cant.</th>
+                    <th className="border border-black p-1 text-right">Preț U.</th>
+                    <th className="border border-black p-1 text-right">Valoare</th>
+                    <th className="border border-black p-1 text-right">TVA %</th>
+                    <th className="border border-black p-1 text-right">TVA Tot</th>
+                    <th className="border border-black p-1 text-right">Adaos %</th>
+                    <th className="border border-black p-1 text-right">Adaos V.</th>
+                    <th className="border border-black p-1 text-right">TVA Ad.</th>
+                    <th className="border border-black p-1 text-right">Preț V.</th>
+                    <th className="border border-black p-1 text-right">Val. V.</th>
                   </tr>
                 </thead>
                 <tbody>
                   {printNir.items.map((item, idx) => {
-                    const total = item.quantity * item.price;
+                    // Base calculations
+                    const valoare = item.quantity * item.price;
+                    const tvaTot = valoare * (item.vatRate / 100);
+                    const adaosValoare = valoare * (item.markup / 100);
+                    const tvaAdaos = adaosValoare * (item.vatRate / 100);
+                    const pretVanzare = item.price * (1 + item.markup / 100);
+                    const valoareVanzare = item.quantity * pretVanzare;
+                    
                     return (
                       <tr key={item.id}>
-                        <td className="border border-black p-2 text-center">{idx + 1}</td>
-                        <td className="border border-black p-2">{item.product.name}</td>
-                        <td className="border border-black p-2 text-right">{item.quantity}</td>
-                        <td className="border border-black p-2 text-right">{item.price.toFixed(2)}</td>
-                        <td className="border border-black p-2 text-right">{item.vatRate}%</td>
-                        <td className="border border-black p-2 text-right font-medium">{total.toFixed(2)}</td>
+                        <td className="border border-black p-1 text-center">{idx + 1}</td>
+                        <td className="border border-black p-1">{item.product.name}</td>
+                        <td className="border border-black p-1 text-center">{item.product.unit}</td>
+                        <td className="border border-black p-1 text-right">{item.quantity}</td>
+                        <td className="border border-black p-1 text-right">{item.price.toFixed(2)}</td>
+                        <td className="border border-black p-1 text-right">{valoare.toFixed(2)}</td>
+                        <td className="border border-black p-1 text-right">{item.vatRate}%</td>
+                        <td className="border border-black p-1 text-right">{tvaTot.toFixed(2)}</td>
+                        <td className="border border-black p-1 text-right">{item.markup}%</td>
+                        <td className="border border-black p-1 text-right">{adaosValoare.toFixed(2)}</td>
+                        <td className="border border-black p-1 text-right">{tvaAdaos.toFixed(2)}</td>
+                        <td className="border border-black p-1 text-right">{pretVanzare.toFixed(2)}</td>
+                        <td className="border border-black p-1 text-right font-medium">{valoareVanzare.toFixed(2)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot>
                   <tr className="font-bold bg-gray-100">
-                    <td className="border border-black p-2 text-right" colSpan="5">TOTAL GENERAL:</td>
-                    <td className="border border-black p-2 text-right">
-                      {printNir.items.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)} Lei
+                    <td className="border border-black p-1 text-right" colSpan="12">TOTAL GENERAL:</td>
+                    <td className="border border-black p-1 text-right">
+                      {printNir.items.reduce((sum, item) => {
+                        const pretVanzare = item.price * (1 + item.markup / 100);
+                        return sum + (item.quantity * pretVanzare);
+                      }, 0).toFixed(2)} Lei
                     </td>
                   </tr>
                 </tfoot>
