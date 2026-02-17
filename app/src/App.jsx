@@ -34,7 +34,7 @@ import AdvancedReportsPage from "./pages/AdvancedReportsPage.jsx";
 import UtilitiesPage from "./pages/UtilitiesPage.jsx";
 
 const MANAGEMENT_VIEWS = [
-  "products", "recipes", "suppliers", "nir", "transfers",
+  "products", "rawMaterials", "recipes", "suppliers", "nir", "transfers",
   "returs", "inventory", "stock", "categories", "departments", "users",
 ];
 
