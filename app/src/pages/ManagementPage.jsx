@@ -338,6 +338,17 @@ function NIRTab() {
     fetch("/api/products").then((r) => r.json()).then(setProducts);
   }, []);
 
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && showPrintModal) {
+        setShowPrintModal(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showPrintModal]);
+
   const addItem = () => setForm({ ...form, items: [...form.items, { productId: "", quantity: "", price: "", vatRate: "0" }] });
   const removeItem = (idx) => setForm({ ...form, items: form.items.filter((_, i) => i !== idx) });
   const updateItem = (idx, field, value) => {
@@ -499,12 +510,18 @@ function NIRTab() {
 
       {/* Print Modal */}
       {showPrintModal && printNir && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowPrintModal(false)}>
+        <div 
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" 
+          onClick={() => setShowPrintModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="print-modal-title"
+        >
           <div className="bg-white text-black rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto print:max-h-none print:overflow-visible" onClick={(e) => e.stopPropagation()}>
             <div className="p-8 print:p-12">
               {/* Header */}
               <div className="text-center mb-8 border-b-2 border-black pb-4">
-                <h1 className="text-2xl font-bold mb-2">NOTĂ DE INTRARE-RECEPȚIE</h1>
+                <h1 id="print-modal-title" className="text-2xl font-bold mb-2">NOTĂ DE INTRARE-RECEPȚIE</h1>
                 <p className="text-lg">Nr. {printNir.number}</p>
                 <p className="text-sm text-gray-600">Data: {new Date(printNir.date).toLocaleDateString("ro-RO")}</p>
               </div>
