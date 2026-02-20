@@ -32,6 +32,21 @@ import ComandaSupervisorPage from "./pages/ComandaSupervisorPage.jsx";
 import RecipeVerificationPage from "./pages/RecipeVerificationPage.jsx";
 import AdvancedReportsPage from "./pages/AdvancedReportsPage.jsx";
 import UtilitiesPage from "./pages/UtilitiesPage.jsx";
+import GuestIdentityPage from "./pages/GuestIdentityPage.jsx";
+import PaymentOrchestrationPage from "./pages/PaymentOrchestrationPage.jsx";
+import SupplyChainPage from "./pages/SupplyChainPage.jsx";
+import LaborOptimizationPage from "./pages/LaborOptimizationPage.jsx";
+import WarRoomPage from "./pages/WarRoomPage.jsx";
+import InfraHealthPage from "./pages/InfraHealthPage.jsx";
+import ExperienceEnginePage from "./pages/ExperienceEnginePage.jsx";
+import DarkKitchenPage from "./pages/DarkKitchenPage.jsx";
+import RevenueSciencePage from "./pages/RevenueSciencePage.jsx";
+import FranchisePage from "./pages/FranchisePage.jsx";
+import ApiEconomyPage from "./pages/ApiEconomyPage.jsx";
+import DataNetworkPage from "./pages/DataNetworkPage.jsx";
+import RiskEnginePage from "./pages/RiskEnginePage.jsx";
+import FinancialControlPage from "./pages/FinancialControlPage.jsx";
+import SuperAppPage from "./pages/SuperAppPage.jsx";
 
 const MANAGEMENT_VIEWS = [
   "products", "rawMaterials", "recipes", "suppliers", "nir", "transfers",
@@ -116,6 +131,36 @@ export default function App() {
         return <AdvancedReportsPage user={user} onLogout={handleLogout} />;
       case "utilities":
         return <UtilitiesPage user={user} onLogout={handleLogout} />;
+      case "guest-identity":
+        return <GuestIdentityPage />;
+      case "payment-orchestration":
+        return <PaymentOrchestrationPage />;
+      case "supply-chain":
+        return <SupplyChainPage />;
+      case "labor-optimization":
+        return <LaborOptimizationPage />;
+      case "war-room":
+        return <WarRoomPage />;
+      case "infra-health":
+        return <InfraHealthPage />;
+      case "experience-engine":
+        return <ExperienceEnginePage />;
+      case "dark-kitchen":
+        return <DarkKitchenPage />;
+      case "revenue-science":
+        return <RevenueSciencePage />;
+      case "franchise":
+        return <FranchisePage />;
+      case "api-economy":
+        return <ApiEconomyPage />;
+      case "data-network":
+        return <DataNetworkPage />;
+      case "risk-engine":
+        return <RiskEnginePage />;
+      case "financial-control":
+        return <FinancialControlPage />;
+      case "superapp":
+        return <SuperAppPage />;
       case "manual":
         return <ManualPage />;
       case "order-history":
